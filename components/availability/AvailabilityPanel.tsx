@@ -257,7 +257,8 @@ export function AvailabilityPanel({
             othersCount={gridCount}
             onToggle={editable ? onToggle : undefined}
             departReelStarts={gridDepartStarts}
-            getNamesAt={(k) => namesPerSlot.get(k) ?? []}
+            // 편집 중엔 가능한 사람 목록 숨김 (입력 집중 — 시간만 툴팁)
+            getNamesAt={(k) => (editable ? [] : namesPerSlot.get(k) ?? [])}
           />
         )}
       </div>
