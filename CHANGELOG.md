@@ -1,0 +1,74 @@
+# CHANGELOG
+
+Let's Meet in FF14의 주목할 만한 변경사항.
+형식: [Keep a Changelog](https://keepachangelog.com/ko/1.1.0/) 변형 (한국어 섹션).
+
+각 항목 prefix:
+- **신규** (Added) — 새 기능
+- **변경** (Changed) — 기존 동작 변경
+- **수정** (Fixed) — 버그 수정
+- **제거** (Removed) — 삭제된 기능
+
+날짜는 한국 시간(KST) 기준.
+
+---
+
+## [Unreleased]
+
+(다음 배포 전 변경사항)
+
+---
+
+## 2026-04-29 — Phase 1 배포 후 개선
+
+### 신규
+- **공대원 상세 모달** — 좌측 패널에서 멤버 li 클릭 시 모달. 프로필(직업·자리·프프로그·자기소개) + 본인이 입력한 이번 주 가능 시간 그리드(read-only).
+- **셀 hover 툴팁** — 시간 그리드 셀에 마우스 올리면 시간 + "가능 (N명): 캐릭A, 캐릭B, ..." 표시. CSS only (data-tooltip).
+- **메인 자리 중복 방지** — 프로필 편집 시 다른 공대원이 이미 main으로 잡은 자리는 비활성. 체인지 가능 자리에는 제약 없음.
+- **OAuth redirect 보존** — `/join?code=XXX` 같은 URL을 비로그인 상태에서 접속 → Discord 로그인 → 자동으로 원래 URL로 회귀. open redirect 방어 포함.
+- **멤버 제출 상태 시각 표시** — 좌측 멤버 목록에서 이번 주 응답 완료자=초록 틴트(25%), 미응답=빨강 틴트(25%) + "일정 입력 전" 배지.
+- **세션 1릴 개수 옵션** — 공대 만들기/수정 시 한 세션에 진행할 1릴 개수(1~4) 선택. 추천 카드/일정 확정 길이가 이 값 기준.
+- **공대원 8명 정원 한도** — 9번째 가입 시도 시 서버에서 거부.
+- **공대원 실시간 갱신** — 다른 사람 가입/탈퇴/프로필 변경이 본인 화면에 즉시 반영 (onSnapshot).
+- **다크/라이트 테마 토글** — 헤더 우상단 ☀️/🌙. 다크 기본, 선택 localStorage 저장.
+
+### 변경
+- **이름**: FFTuning → Let's Meet in FF14
+- **레이드 콘텐츠**: 모든 극만신 40개 추가 (신생~황금), 환만신 제거, 영식 이름 약칭화 ("아르카디아 헤비급 1식" → shortKor "헤비급 1층"), nameKor는 풀네임 유지
+- **드롭다운 정렬**: 극만신 → 영식 → 절 (각 그룹 내 패치 내림차순)
+- **공대 기본명 로직**: 극만신은 풀네임 fallback ("극 에누오 공대"), 토벌전 접미사 제거
+- **모든 input placeholder 제거**
+
+### 수정
+- **시간 그리드 클릭 화면 갱신 안 되는 버그** — 제출 전 상태에서 selfSlots가 savedSlots(빈 값)를 가리키던 문제. editable 기준으로 draft/saved 분기.
+- **다른 사람 가입이 즉시 반영 안 되던 문제** — listPartyMembers (1회 fetch) → subscribePartyMembers (onSnapshot)
+- **Vercel 배포 ESLint 차단** — unused vars/imports 정리
+- **Discord OAuth localhost redirect 문제** — 환경변수 + Vercel redeploy 필요 안내
+- **잡 아이콘 매핑** — XIVAPI 잡 ID 6개 off-by-one 보정 (BLU 누락분)
+- **Next.js 14.2.35 보안 패치 반영**
+
+### 인프라
+- **Firestore 룰**: 일반 멤버가 progressNote 단일 필드만 update 가능 (협업 메모용)
+- **App Hosting → Vercel**: 배포 플랫폼 전환
+- **GitHub repo private**: boriborisal/letsmeetinff14
+
+---
+
+## 2026-04-28 — Phase 1 MVP 첫 배포
+
+### 신규 (초기 커밋)
+- **인증**: Discord OAuth (Firebase Custom Token 방식). 로그인/로그아웃, users/{uid} 자동 생성.
+- **공대 관리**: 생성 / 수정 / 탈퇴 / 초대 코드 / 8명까지 가입.
+- **멤버 프로필**: 캐릭명, 서버(모그리/초코보/카벙클/톤베리/펜리르), 메인 잡 + 가능 잡, 메인 자리 + 체인지 가능 자리, 프프로그 URL, 자기소개.
+- **가능 시간 입력 그리드**: when2meet 스타일, 30분 단위, 1릴 단위 wrap (셀 4/3/2개), 주 페이지네이션, 다른 공대원 응답 heatmap, 클릭/드래그 토글.
+- **출발 가능 1릴 자동 추출**: 8자리 백트래킹 매칭, 연속 1릴 그룹화, 추천 카드 (가장 긴 그룹 + 주말 우선).
+- **일정 확정 + 출석**: 공대장 확정, 멤버 출/결/미정 + 결석 사유 메모, 휴공 처리.
+- **진도 메모**: 공대 페이지 자유 텍스트 (모든 멤버 편집).
+- **레이드 시드**: 절 7 + 영식 60.
+- **잡 아이콘**: XIVAPI 21개 다운로드, 롤 색 배경 위에 합성.
+
+### 인프라
+- Next.js 14 (App Router) + TypeScript + Tailwind
+- Firebase (Firestore + Auth, asia-northeast3) + Discord OAuth
+- Firestore 룰 + App Check 가이드
+- Vercel 배포
