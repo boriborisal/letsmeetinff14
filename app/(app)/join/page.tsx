@@ -66,7 +66,7 @@ export default function JoinPage() {
             type="text"
             value={charName}
             onChange={(e) => setCharName(e.target.value)}
-            placeholder="예: Hilda Lockhart"
+            placeholder="예: 비누솝"
             maxLength={30}
             className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground"
           />
