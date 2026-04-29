@@ -6,6 +6,7 @@ import {
   deleteField,
   doc,
   getDocs,
+  onSnapshot,
   orderBy,
   query,
   updateDoc,
@@ -72,4 +73,18 @@ export async function listSchedules(partyId: string): Promise<Schedule[]> {
   );
   const snap = await getDocs(q);
   return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Schedule, "id">) }));
+}
+
+export function subscribeSchedules(
+  partyId: string,
+  cb: (schedules: Schedule[]) => void,
+): () => void {
+  const db = getFirebaseDb();
+  const q = query(
+    collection(db, "parties", partyId, "schedules"),
+    orderBy("reelStart", "asc"),
+  );
+  return onSnapshot(q, (snap) => {
+    cb(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Schedule, "id">) })));
+  });
 }

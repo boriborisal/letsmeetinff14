@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { getMember, updateMyMemberProfile } from "@/lib/firestore/members";
+import { getMember, listPartyMembers, updateMyMemberProfile } from "@/lib/firestore/members";
 import { JobIcon } from "@/components/common/JobIcon";
 import {
   ALL_SERVERS,
@@ -27,6 +27,7 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
   const router = useRouter();
 
   const [member, setMember] = useState<Member | null>(null);
+  const [allMembers, setAllMembers] = useState<Member[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -46,14 +47,15 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
-    getMember(partyId, user.uid)
-      .then((m) => {
+    Promise.all([getMember(partyId, user.uid), listPartyMembers(partyId)])
+      .then(([m, all]) => {
         if (cancelled) return;
         if (!m) {
           setLoadError("이 공대의 멤버가 아닙니다.");
           return;
         }
         setMember(m);
+        setAllMembers(all);
         setCharName(m.charName);
         setServer(m.server);
         setMainJob(m.mainJob);
@@ -69,6 +71,16 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
       cancelled = true;
     };
   }, [partyId, user]);
+
+  // 다른 공대원이 이미 메인으로 잡은 자리 — 본인은 제외
+  const takenMainSlots = useMemo(() => {
+    if (!user) return new Set<Slot>();
+    const set = new Set<Slot>();
+    for (const m of allMembers) {
+      if (m.uid !== user.uid) set.add(m.mainSlot);
+    }
+    return set;
+  }, [allMembers, user]);
 
   function toggleSubJob(job: Job) {
     setSubJobs((prev) => {
@@ -202,8 +214,14 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
           <h2 className="text-sm font-medium">자리</h2>
 
           <div className="space-y-3">
-            <p className="text-xs text-muted-foreground">메인 자리 (1개)</p>
-            <SlotGrid selected={new Set([mainSlot])} onPick={(s) => setMainSlot(s)} />
+            <p className="text-xs text-muted-foreground">
+              메인 자리 (1개) — 다른 공대원이 이미 잡은 자리는 선택 불가
+            </p>
+            <SlotGrid
+              selected={new Set([mainSlot])}
+              onPick={(s) => setMainSlot(s)}
+              disabledSlots={takenMainSlots}
+            />
           </div>
 
           <div className="space-y-3">

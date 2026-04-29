@@ -7,7 +7,9 @@ import { PartyInfoPanel } from "@/components/party/PartyInfoPanel";
 import { AvailabilityPanel } from "@/components/availability/AvailabilityPanel";
 import { getParty } from "@/lib/firestore/parties";
 import { subscribePartyMembers } from "@/lib/firestore/members";
-import type { Member, Party } from "@/types";
+import { subscribeWeekAvailabilities } from "@/lib/firestore/availability";
+import { currentWeekStart } from "@/lib/datetime/week";
+import type { Availability, Member, Party } from "@/types";
 
 export default function PartyDetailPage({ params }: { params: { id: string } }) {
   const { id } = params;
@@ -17,11 +19,15 @@ export default function PartyDetailPage({ params }: { params: { id: string } }) 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // 주 단위 상태 — 두 패널 공유 (lift)
+  const [weekStart, setWeekStart] = useState(() => currentWeekStart());
+  const [weekAvailabilities, setWeekAvailabilities] = useState<Availability[]>([]);
+
+  // 공대 + 멤버 구독
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
 
-    // 공대 doc은 1회 fetch (자주 안 바뀜 — 변경 시 본인이 수정한 거라 즉시 setState로 반영)
     getParty(id)
       .then((p) => {
         if (cancelled) return;
@@ -31,7 +37,6 @@ export default function PartyDetailPage({ params }: { params: { id: string } }) 
       .catch(() => !cancelled && setError("공대 정보를 불러오지 못했습니다."))
       .finally(() => !cancelled && setLoading(false));
 
-    // 멤버는 실시간 구독 — 가입/탈퇴/프로필 변경이 다른 사람 화면에도 즉시 반영
     const unsub = subscribePartyMembers(id, (ms) => {
       if (cancelled) return;
       setMembers(ms);
@@ -42,6 +47,20 @@ export default function PartyDetailPage({ params }: { params: { id: string } }) 
       unsub();
     };
   }, [id, user]);
+
+  // 주별 응답 실시간 구독 (week 변경 시 재구독)
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    const unsub = subscribeWeekAvailabilities(id, weekStart, (list) => {
+      if (cancelled) return;
+      setWeekAvailabilities(list);
+    });
+    return () => {
+      cancelled = true;
+      unsub();
+    };
+  }, [id, user, weekStart]);
 
   if (loading) {
     return <main className="container py-10 text-sm text-muted-foreground">불러오는 중…</main>;
@@ -65,6 +84,11 @@ export default function PartyDetailPage({ params }: { params: { id: string } }) 
     );
   }
 
+  // 제출 완료한 멤버 uid 집합 — 현재 보고 있는 주 기준
+  const submittedUids = new Set(
+    weekAvailabilities.filter((a) => a.submitted).map((a) => a.uid),
+  );
+
   return (
     <main className="container max-w-7xl py-6">
       <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
@@ -73,12 +97,18 @@ export default function PartyDetailPage({ params }: { params: { id: string } }) 
           members={members}
           myMember={myMember}
           uid={user.uid}
+          submittedUids={submittedUids}
+          weekStart={weekStart}
+          weekAvailabilities={weekAvailabilities}
           onPartyUpdated={(p) => setParty(p)}
         />
         <AvailabilityPanel
           party={party}
           members={members}
           uid={user.uid}
+          weekStart={weekStart}
+          onWeekChange={setWeekStart}
+          weekAvailabilities={weekAvailabilities}
         />
       </div>
     </main>

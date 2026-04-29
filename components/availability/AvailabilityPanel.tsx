@@ -16,11 +16,7 @@ import { WeekNavigator } from "./WeekNavigator";
 import { Legend } from "./Legend";
 import { RecommendationCard } from "./RecommendationCard";
 import { ScheduleList } from "@/components/schedule/ScheduleList";
-import {
-  getMyAvailability,
-  listWeekAvailabilities,
-  saveMyAvailability,
-} from "@/lib/firestore/availability";
+import { saveMyAvailability } from "@/lib/firestore/availability";
 import { getRaidContent } from "@/lib/raid/contents";
 import { buildReelWindows, evaluateReels } from "@/lib/matching/reel";
 import {
@@ -31,71 +27,69 @@ import {
   type ReelFeasibility,
   type SlotKey,
 } from "@/types";
-import {
-  currentWeekStart,
-  shiftWeek,
-  weekWindowSlotKeys,
-} from "@/lib/datetime/week";
+import { shiftWeek, weekWindowSlotKeys } from "@/lib/datetime/week";
 
 interface Props {
   party: Party;
   members: Member[];
   uid: string;
+  weekStart: string;
+  onWeekChange: (next: string) => void;
+  weekAvailabilities: Availability[];
 }
 
-export function AvailabilityPanel({ party, members, uid }: Props) {
+export function AvailabilityPanel({
+  party,
+  members,
+  uid,
+  weekStart,
+  onWeekChange,
+  weekAvailabilities,
+}: Props) {
   const raid = useMemo(() => getRaidContent(party.raidContentId), [party.raidContentId]);
   const tier = raid?.tier ?? "ultimate";
   const reelLen = useMemo(() => reelSlotsForTier(tier), [tier]);
   const isLeader = uid === party.leaderUid;
 
-  const [weekStart, setWeekStart] = useState(() => currentWeekStart());
-
-  // 응답 상태
-  const [savedSlots, setSavedSlots] = useState<Set<SlotKey>>(new Set()); // 서버에 저장된 본인 응답
-  const [draftSlots, setDraftSlots] = useState<Set<SlotKey>>(new Set()); // 편집 중 로컬 드래프트
-  const [othersAvail, setOthersAvail] = useState<Availability[]>([]);
+  // 본인 응답 / 드래프트 상태
+  const [savedSlots, setSavedSlots] = useState<Set<SlotKey>>(new Set());
+  const [draftSlots, setDraftSlots] = useState<Set<SlotKey>>(new Set());
   const [submitted, setSubmitted] = useState(false);
-  const [editing, setEditing] = useState(false); // submit 후 "수정" 클릭 → true
+  const [editing, setEditing] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [weekLoading, setWeekLoading] = useState(false);
-  const [reloadKey, setReloadKey] = useState(0);
+
+  // 부모에서 받은 주별 응답을 본인 vs 다른 공대원으로 분리
+  const myAvail = useMemo(
+    () => weekAvailabilities.find((a) => a.uid === uid),
+    [weekAvailabilities, uid],
+  );
+  const othersAvail = useMemo(
+    () => weekAvailabilities.filter((a) => a.uid !== uid),
+    [weekAvailabilities, uid],
+  );
+
+  // 본인 응답이 외부(자신의 다른 탭이나 직접 DB)에서 변경된 경우 sync
+  useEffect(() => {
+    const saved = new Set(myAvail?.available ?? []);
+    setSavedSlots(saved);
+    setSubmitted(myAvail?.submitted ?? false);
+  }, [myAvail]);
+
+  // 주가 바뀌면 편집 상태 초기화 + draft를 새 saved로
+  useEffect(() => {
+    setEditing(false);
+    setDraftSlots(new Set(myAvail?.available ?? []));
+    // weekStart 변경 시 한 번만 — myAvail이 같이 바뀌어 위 useEffect가 saved도 업데이트
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weekStart]);
 
   const editable = !submitted || editing;
   // 편집 가능 상태(제출 전 또는 수정 중)에선 draft, 잠금 상태에선 saved를 표시.
-  // 제출 전인데 saved를 표시하면 클릭해도 화면이 안 바뀌는 버그가 있었음.
   const selfSlots = editable ? draftSlots : savedSlots;
   const dirty = editing && !setEqual(draftSlots, savedSlots);
-
-  // 데이터 로드
-  useEffect(() => {
-    let cancelled = false;
-    setWeekLoading(true);
-    (async () => {
-      try {
-        const [mine, all] = await Promise.all([
-          getMyAvailability(party.id, uid, weekStart),
-          listWeekAvailabilities(party.id, weekStart),
-        ]);
-        if (cancelled) return;
-        const saved = new Set(mine?.available ?? []);
-        setSavedSlots(saved);
-        setDraftSlots(new Set(saved));
-        setSubmitted(mine?.submitted ?? false);
-        setEditing(false);
-        setOthersAvail(all.filter((a) => a.uid !== uid));
-      } catch (err) {
-        console.error(err);
-      } finally {
-        if (!cancelled) setWeekLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [party.id, uid, weekStart, reloadKey]);
+  const weekLoading = false; // 부모가 구독으로 즉시 데이터 제공
 
   // 슬롯별 다른 공대원 카운트 (INPUT 편집 시)
   const othersCount = useMemo(() => {
@@ -105,6 +99,26 @@ export function AvailabilityPanel({ party, members, uid }: Props) {
     }
     return m;
   }, [othersAvail]);
+
+  // 슬롯별 가능한 사람 캐릭명 목록 (본인 포함, 툴팁용)
+  const namesPerSlot = useMemo(() => {
+    const map = new Map<SlotKey, string[]>();
+    const memberByUid = new Map(members.map((m) => [m.uid, m]));
+    const all: { uid: string; available: SlotKey[] }[] = [
+      ...othersAvail.map((a) => ({ uid: a.uid, available: a.available })),
+      { uid, available: Array.from(selfSlots) },
+    ];
+    for (const a of all) {
+      const m = memberByUid.get(a.uid);
+      if (!m) continue;
+      for (const k of a.available) {
+        const arr = map.get(k);
+        if (arr) arr.push(m.charName);
+        else map.set(k, [m.charName]);
+      }
+    }
+    return map;
+  }, [othersAvail, selfSlots, uid, members]);
 
   // 통합 카운트 (잠금 또는 RESULT — 본인 포함)
   const integratedCount = useMemo(() => {
@@ -206,8 +220,8 @@ export function AvailabilityPanel({ party, members, uid }: Props) {
 
       <WeekNavigator
         weekStart={weekStart}
-        onPrev={() => setWeekStart((w) => shiftWeek(w, -1))}
-        onNext={() => setWeekStart((w) => shiftWeek(w, +1))}
+        onPrev={() => onWeekChange(shiftWeek(weekStart, -1))}
+        onNext={() => onWeekChange(shiftWeek(weekStart, +1))}
       />
 
       <ScheduleList
@@ -216,7 +230,6 @@ export function AvailabilityPanel({ party, members, uid }: Props) {
         uid={uid}
         isLeader={isLeader}
         members={members}
-        reloadKey={reloadKey}
       />
 
       <Legend mode={gridMode} totalOthers={totalOthers} reelLen={reelLen} />
@@ -228,7 +241,7 @@ export function AvailabilityPanel({ party, members, uid }: Props) {
           isLeader={isLeader}
           uid={uid}
           reelsPerSession={party.reelsPerSession ?? 1}
-          onConfirmed={() => setReloadKey((k) => k + 1)}
+          onConfirmed={() => { /* 일정 확정은 ScheduleList가 자체 onSnapshot으로 갱신 */ }}
         />
       ) : null}
 
@@ -244,6 +257,7 @@ export function AvailabilityPanel({ party, members, uid }: Props) {
             othersCount={gridCount}
             onToggle={editable ? onToggle : undefined}
             departReelStarts={gridDepartStarts}
+            getNamesAt={(k) => namesPerSlot.get(k) ?? []}
           />
         )}
       </div>

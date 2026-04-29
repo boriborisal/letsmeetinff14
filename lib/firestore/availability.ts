@@ -5,6 +5,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  onSnapshot,
   query,
   setDoc,
   where,
@@ -66,4 +67,20 @@ export async function listWeekAvailabilities(
   );
   const snap = await getDocs(q);
   return snap.docs.map((d) => d.data() as Availability);
+}
+
+/** 한 주 응답 실시간 구독 — 다른 사람 제출/수정이 즉시 반영. */
+export function subscribeWeekAvailabilities(
+  partyId: Party["id"],
+  weekStart: string,
+  cb: (availabilities: Availability[]) => void,
+): () => void {
+  const db = getFirebaseDb();
+  const q = query(
+    collection(db, "parties", partyId, "availabilities"),
+    where("weekStart", "==", weekStart),
+  );
+  return onSnapshot(q, (snap) => {
+    cb(snap.docs.map((d) => d.data() as Availability));
+  });
 }

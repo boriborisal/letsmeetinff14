@@ -27,6 +27,8 @@ export interface AvailabilityGridProps {
   onToggle?: (key: SlotKey, nextValue: boolean) => void;
   /** 출발 가능 1릴 시작 슬롯 키 집합 (RESULT 모드, 외곽선 표시용) */
   departReelStarts?: Set<SlotKey>;
+  /** hover 툴팁용 — 해당 슬롯에 가능 응답한 캐릭명 목록 */
+  getNamesAt?: (key: SlotKey) => string[];
 }
 
 export function AvailabilityGrid({
@@ -37,6 +39,7 @@ export function AvailabilityGrid({
   othersCount,
   onToggle,
   departReelStarts,
+  getNamesAt,
 }: AvailabilityGridProps) {
   const days = useMemo(() => weekDays(weekStart), [weekStart]);
   const dayWindows = useMemo(
@@ -113,6 +116,7 @@ export function AvailabilityGrid({
                           mode={mode}
                           on={selfSlots.has(key)}
                           othersN={othersCount.get(key) ?? 0}
+                          names={getNamesAt?.(key) ?? []}
                           onMouseDown={onCellMouseDown}
                           onMouseEnter={onCellMouseEnter}
                         />
@@ -134,11 +138,12 @@ interface CellProps {
   mode: GridMode;
   on: boolean;
   othersN: number;
+  names: string[];
   onMouseDown?: (key: SlotKey) => void;
   onMouseEnter?: (key: SlotKey) => void;
 }
 
-function Cell({ slotKey, mode, on, othersN, onMouseDown, onMouseEnter }: CellProps) {
+function Cell({ slotKey, mode, on, othersN, names, onMouseDown, onMouseEnter }: CellProps) {
   const cls = ["s"];
   if (mode === "input") {
     if (on) {
@@ -152,10 +157,14 @@ function Cell({ slotKey, mode, on, othersN, onMouseDown, onMouseEnter }: CellPro
     cls.push("readonly");
   }
 
+  const tooltip = names.length > 0
+    ? `${formatSlotForTip(slotKey)}\n가능 (${names.length}): ${names.join(", ")}`
+    : formatSlotForTip(slotKey);
+
   return (
     <div
       className={cls.join(" ")}
-      title={slotKey}
+      data-tooltip={tooltip}
       onMouseDown={(e) => {
         e.preventDefault();
         onMouseDown?.(slotKey);
@@ -164,6 +173,14 @@ function Cell({ slotKey, mode, on, othersN, onMouseDown, onMouseEnter }: CellPro
       data-slot={slotKey}
     />
   );
+}
+
+// "2026-04-29T20:00" → "수 4/29 20:00" 식으로 짧게
+function formatSlotForTip(key: SlotKey): string {
+  const [datePart, timePart] = key.split("T") as [string, string];
+  const [yyyy, mm, dd] = datePart.split("-").map(Number) as [number, number, number];
+  const dow = ["일", "월", "화", "수", "목", "금", "토"][new Date(Date.UTC(yyyy, mm - 1, dd)).getUTCDay()];
+  return `${dow} ${mm}/${dd} ${timePart}`;
 }
 
 function heatClass(n: number, max: number): string {

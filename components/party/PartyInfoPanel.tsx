@@ -14,10 +14,12 @@ import {
 } from "@/lib/firestore/parties";
 import { activeRaidContents, getRaidContent } from "@/lib/raid/contents";
 import { JobIcon } from "@/components/common/JobIcon";
+import { MemberDetailModal } from "./MemberDetailModal";
 import {
   JOB_KOR,
   REEL_MIN_BY_TIER,
   SERVER_KOR,
+  type Availability,
   type Member,
   type Party,
 } from "@/types";
@@ -27,10 +29,24 @@ interface Props {
   members: Member[];
   myMember: Member;
   uid: string;
+  submittedUids: Set<string>;
+  weekStart: string;
+  weekAvailabilities: Availability[];
   onPartyUpdated: (p: Party) => void;
 }
 
-export function PartyInfoPanel({ party, members, myMember, uid, onPartyUpdated }: Props) {
+export function PartyInfoPanel({
+  party,
+  members,
+  myMember,
+  uid,
+  submittedUids,
+  weekStart,
+  weekAvailabilities,
+  onPartyUpdated,
+}: Props) {
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const raidForModal = getRaidContent(party.raidContentId);
   const [editing, setEditing] = useState(false);
   const isLeader = uid === party.leaderUid;
   const raid = getRaidContent(party.raidContentId);
@@ -154,33 +170,66 @@ export function PartyInfoPanel({ party, members, myMember, uid, onPartyUpdated }
       {/* 공대원 목록 */}
       <section className="space-y-2">
         <h2 className="text-base font-medium text-muted-foreground">
-          공대원 ({members.length} / 8)
+          공대원 ({members.length} / 8) — {submittedUids.size}/{members.length} 응답
         </h2>
         <ul className="divide-y divide-border overflow-hidden rounded-md border border-border bg-card">
-          {members.map((m) => (
-            <li key={m.uid} className="flex items-center justify-between px-3 py-2 text-base">
-              <div className="min-w-0">
-                <p className="truncate">
-                  {m.charName}
-                  {m.role === "leader" ? (
-                    <span className="ml-1.5 rounded bg-secondary px-1 py-px text-[15px] text-muted-foreground">
-                      장
-                    </span>
-                  ) : null}
-                </p>
-                <p className="flex items-center gap-1 truncate text-base text-muted-foreground">
-                  <span>{SERVER_KOR[m.server]} ·</span>
-                  <JobIcon job={m.mainJob} size={18} />
-                  <span>{JOB_KOR[m.mainJob]} · {m.mainSlot}</span>
-                </p>
-              </div>
-            </li>
-          ))}
+          {members.map((m) => {
+            const submitted = submittedUids.has(m.uid);
+            // 응답 완료 = 초록 50% / 미응답 = 빨강 50% (배경 오퍼시티)
+            const bg = submitted
+              ? "rgba(34, 197, 94, 0.5)"   // green/50
+              : "rgba(239, 68, 68, 0.5)";  // red/50
+            return (
+              <li key={m.uid}>
+                <button
+                  type="button"
+                  onClick={() => setSelectedMember(m)}
+                  className="flex w-full items-center justify-between px-3 py-2 text-left text-base transition hover:brightness-110"
+                  style={{ background: bg }}
+                >
+                  <div className="min-w-0">
+                    <p className="truncate">
+                      {m.charName}
+                      {m.role === "leader" ? (
+                        <span className="ml-1.5 rounded bg-black/30 px-1 py-px text-[15px] text-white">
+                          장
+                        </span>
+                      ) : null}
+                      {!submitted ? (
+                        <span className="ml-1.5 rounded bg-black/30 px-1.5 py-px text-[13px] text-white">
+                          일정 입력 전
+                        </span>
+                      ) : null}
+                    </p>
+                    <p className="flex items-center gap-1 truncate text-base text-white/90">
+                      <span>{SERVER_KOR[m.server]} ·</span>
+                      <JobIcon job={m.mainJob} size={18} />
+                      <span>{JOB_KOR[m.mainJob]} · {m.mainSlot}</span>
+                    </p>
+                  </div>
+                </button>
+              </li>
+            );
+          })}
         </ul>
       </section>
 
       {/* 위험 영역: 탈퇴 (리더 제외) */}
       <LeavePartySection partyId={party.id} uid={uid} isLeader={isLeader} />
+
+      {/* 멤버 상세 모달 */}
+      <MemberDetailModal
+        open={selectedMember !== null}
+        onClose={() => setSelectedMember(null)}
+        member={selectedMember}
+        raid={raidForModal}
+        weekStart={weekStart}
+        memberAvailability={
+          selectedMember
+            ? weekAvailabilities.find((a) => a.uid === selectedMember.uid)
+            : undefined
+        }
+      />
     </aside>
   );
 }

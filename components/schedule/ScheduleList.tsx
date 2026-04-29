@@ -10,8 +10,8 @@ import { weekDays } from "@/lib/datetime/week";
 import { describeReelRange } from "@/lib/datetime/format";
 import {
   cancelSchedule,
-  listSchedules,
   reactivateSchedule,
+  subscribeSchedules,
 } from "@/lib/firestore/schedules";
 import { listAttendances, setMyAttendance } from "@/lib/firestore/attendance";
 import type {
@@ -27,8 +27,6 @@ interface Props {
   uid: string;
   isLeader: boolean;
   members: Member[];
-  /** 외부에서 일정이 새로 확정되면 prop으로 카운터 증가 → 재조회 */
-  reloadKey?: number;
 }
 
 export function ScheduleList({
@@ -37,54 +35,55 @@ export function ScheduleList({
   uid,
   isLeader,
   members,
-  reloadKey = 0,
 }: Props) {
-  const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [allSchedules, setAllSchedules] = useState<Schedule[]>([]);
   const [attendanceByScheduleId, setAttendanceByScheduleId] = useState<
     Record<string, Attendance[]>
   >({});
   const [loading, setLoading] = useState(true);
-  const [innerKey, setInnerKey] = useState(0);
+  const [attReloadKey, setAttReloadKey] = useState(0);
 
   const weekIsoSet = useMemo(
     () => new Set(weekDays(weekStart).map((d) => d.iso)),
     [weekStart],
   );
 
+  // 일정 자체는 실시간 구독 (확정/휴공이 즉시 반영)
+  useEffect(() => {
+    setLoading(true);
+    const unsub = subscribeSchedules(partyId, (list) => {
+      setAllSchedules(list);
+      setLoading(false);
+    });
+    return unsub;
+  }, [partyId]);
+
+  // 이번 주에 해당하는 일정만 필터
+  const schedules = useMemo(
+    () =>
+      allSchedules
+        .filter((s) => weekIsoSet.has(s.reelStart.split("T")[0]!))
+        .sort((a, b) => (a.reelStart < b.reelStart ? -1 : 1)),
+    [allSchedules, weekIsoSet],
+  );
+
+  // 출석은 일정 변경 시 / 명시적 갱신 시에만 fetch (참여 응답 변화는 row 자체에서 처리)
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
     (async () => {
-      try {
-        const all = await listSchedules(partyId);
-        const thisWeek = all
-          .filter((s) => {
-            const dateOnly = s.reelStart.split("T")[0]!;
-            return weekIsoSet.has(dateOnly);
-          })
-          .sort((a, b) => (a.reelStart < b.reelStart ? -1 : 1));
-        if (cancelled) return;
-        setSchedules(thisWeek);
-
-        // 각 일정의 출석들 fetch
-        const entries = await Promise.all(
-          thisWeek.map(async (s) => {
-            const list = await listAttendances(partyId, s.id);
-            return [s.id, list] as const;
-          }),
-        );
-        if (cancelled) return;
-        setAttendanceByScheduleId(Object.fromEntries(entries));
-      } catch (err) {
-        console.error(err);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
+      const entries = await Promise.all(
+        schedules.map(async (s) => {
+          const list = await listAttendances(partyId, s.id);
+          return [s.id, list] as const;
+        }),
+      );
+      if (cancelled) return;
+      setAttendanceByScheduleId(Object.fromEntries(entries));
+    })().catch(console.error);
     return () => {
       cancelled = true;
     };
-  }, [partyId, weekStart, weekIsoSet, reloadKey, innerKey]);
+  }, [partyId, schedules, attReloadKey]);
 
   if (loading) {
     return (
@@ -115,7 +114,7 @@ export function ScheduleList({
               uid={uid}
               isLeader={isLeader}
               members={members}
-              onChanged={() => setInnerKey((k) => k + 1)}
+              onChanged={() => setAttReloadKey((k) => k + 1)}
             />
           </li>
         ))}

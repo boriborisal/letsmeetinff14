@@ -1,12 +1,23 @@
 // 로그인 페이지. Discord OAuth 시작 링크 1개.
 
-import Link from "next/link";
-
 export const metadata = {
   title: "로그인 · Let's Meet in FF14",
 };
 
-export default function LoginPage() {
+export default function LoginPage({
+  searchParams,
+}: {
+  searchParams: { next?: string };
+}) {
+  // 로그인 후 돌아갈 경로 (예: /join?code=XXX). same-site path만 forward.
+  const next =
+    searchParams.next && searchParams.next.startsWith("/") && !searchParams.next.startsWith("//")
+      ? searchParams.next
+      : null;
+  const loginHref = next
+    ? `/api/auth/discord/login?next=${encodeURIComponent(next)}`
+    : "/api/auth/discord/login";
+
   return (
     <main className="grid min-h-screen place-items-center px-4">
       <div className="w-full max-w-sm space-y-8 text-center">
@@ -17,13 +28,13 @@ export default function LoginPage() {
           </p>
         </header>
 
-        <Link
-          href="/api/auth/discord/login"
+        <a
+          href={loginHref}
           className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-[#5865F2] px-4 py-3 text-sm font-medium text-white transition hover:bg-[#4752c4]"
         >
           <DiscordIcon className="h-5 w-5" />
           Discord로 로그인
-        </Link>
+        </a>
 
         <p className="text-xs text-muted-foreground">
           Discord 계정으로만 로그인할 수 있습니다.

@@ -176,6 +176,7 @@
 }
 
 .s {
+  position: relative;
   height: 18px;
   border-radius: 2px;
   background: var(--color-background-secondary);
@@ -184,6 +185,29 @@
 }
 .s:hover {
   filter: brightness(1.15);
+}
+
+/* hover 툴팁 — 시간 + 가능한 사람 목록 */
+.s[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 4px);
+  transform: translateX(-50%);
+  z-index: 50;
+  white-space: pre-line;
+  background: var(--color-background-primary);
+  color: var(--color-text-primary);
+  border: 1px solid hsl(var(--border));
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  line-height: 1.4;
+  min-width: 110px;
+  text-align: left;
+  pointer-events: none;
+  filter: none;  /* 부모의 brightness hover 영향 차단 */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 }
 .s.readonly { cursor: default; }
 .s.readonly:hover { filter: none; }

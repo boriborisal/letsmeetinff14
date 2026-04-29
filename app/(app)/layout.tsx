@@ -15,7 +15,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!loading && !user) {
-      router.replace("/login");
+      // 로그인 후 원래 가려던 곳으로 돌아오게 next 파라미터에 현재 path 보존
+      const next = window.location.pathname + window.location.search;
+      router.replace(`/login?next=${encodeURIComponent(next)}` as never);
     }
   }, [loading, user, router]);
 

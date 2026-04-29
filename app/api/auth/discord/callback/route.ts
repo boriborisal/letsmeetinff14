@@ -65,13 +65,21 @@ export async function GET(req: NextRequest) {
       await userRef.set({ ...baseDoc, createdAt: Date.now() });
     }
 
-    const html = renderCompleteHtml(customToken);
+    // 로그인 시작 시 set한 next 쿠키가 있으면 그곳으로, 없으면 "/"
+    const nextCookie = req.cookies.get("ff_oauth_next")?.value;
+    const safeNext =
+      nextCookie && nextCookie.startsWith("/") && !nextCookie.startsWith("//")
+        ? nextCookie
+        : "/";
+
+    const html = renderCompleteHtml(customToken, safeNext);
     const res = new NextResponse(html, {
       status: 200,
       headers: { "Content-Type": "text/html; charset=utf-8" },
     });
-    // state 쿠키는 1회용 — 즉시 삭제
+    // state / next 쿠키 1회용 — 즉시 삭제
     res.cookies.set(STATE_COOKIE_NAME, "", { path: "/", maxAge: 0 });
+    res.cookies.set("ff_oauth_next", "", { path: "/", maxAge: 0 });
     return res;
   } catch (err) {
     console.error("[discord/callback] failed", err);
@@ -84,7 +92,7 @@ export async function GET(req: NextRequest) {
 // 별도 페이지 만들지 않고 콜백에서 바로 그림.
 // ─────────────────────────────────────────────
 
-function renderCompleteHtml(customToken: string): string {
+function renderCompleteHtml(customToken: string, nextPath: string): string {
   const cfg = {
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY ?? "",
     authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ?? "",
@@ -116,12 +124,13 @@ function renderCompleteHtml(customToken: string): string {
 
       const config = ${JSON.stringify(cfg)};
       const token = ${JSON.stringify(customToken)};
+      const next = ${JSON.stringify(nextPath)};
 
       const app = getApps()[0] ?? initializeApp(config);
       const auth = getAuth(app);
       try {
         await signInWithCustomToken(auth, token);
-        window.location.replace("/");
+        window.location.replace(next);
       } catch (e) {
         document.querySelector(".box").innerHTML =
           "<p>로그인 실패</p><pre>" + (e?.message ?? e) + "</pre>";
