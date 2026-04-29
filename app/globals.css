@@ -84,12 +84,26 @@
   }
 
   /* 페이지 세로 스크롤바 숨김 (스크롤은 동작) */
-  html {
+  html, body {
     scrollbar-width: none;       /* Firefox */
     -ms-overflow-style: none;    /* IE/Edge legacy */
   }
-  html::-webkit-scrollbar {
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar {
     display: none;               /* WebKit */
+  }
+
+  /* 브라우저 기본 텍스트 입력 컨트롤 — 스크롤바·resizer 숨김 */
+  input, textarea, select {
+    scrollbar-width: none;
+  }
+  input::-webkit-scrollbar,
+  textarea::-webkit-scrollbar,
+  select::-webkit-scrollbar {
+    display: none;
+  }
+  textarea {
+    resize: none;                /* 우측 하단 resizer 핸들도 제거 */
   }
 }
 
