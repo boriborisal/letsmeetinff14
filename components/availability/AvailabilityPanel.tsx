@@ -64,7 +64,9 @@ export function AvailabilityPanel({ party, members, uid }: Props) {
   const [reloadKey, setReloadKey] = useState(0);
 
   const editable = !submitted || editing;
-  const selfSlots = editing ? draftSlots : savedSlots;
+  // 편집 가능 상태(제출 전 또는 수정 중)에선 draft, 잠금 상태에선 saved를 표시.
+  // 제출 전인데 saved를 표시하면 클릭해도 화면이 안 바뀌는 버그가 있었음.
+  const selfSlots = editable ? draftSlots : savedSlots;
   const dirty = editing && !setEqual(draftSlots, savedSlots);
 
   // 데이터 로드

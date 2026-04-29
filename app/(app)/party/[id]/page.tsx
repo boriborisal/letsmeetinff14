@@ -6,7 +6,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { PartyInfoPanel } from "@/components/party/PartyInfoPanel";
 import { AvailabilityPanel } from "@/components/availability/AvailabilityPanel";
 import { getParty } from "@/lib/firestore/parties";
-import { listPartyMembers } from "@/lib/firestore/members";
+import { subscribePartyMembers } from "@/lib/firestore/members";
 import type { Member, Party } from "@/types";
 
 export default function PartyDetailPage({ params }: { params: { id: string } }) {
@@ -18,22 +18,28 @@ export default function PartyDetailPage({ params }: { params: { id: string } }) 
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
     if (!user) return;
-    Promise.all([getParty(id), listPartyMembers(id)])
-      .then(([p, ms]) => {
+    let cancelled = false;
+
+    // 공대 doc은 1회 fetch (자주 안 바뀜 — 변경 시 본인이 수정한 거라 즉시 setState로 반영)
+    getParty(id)
+      .then((p) => {
         if (cancelled) return;
-        if (!p) {
-          setError("공대를 찾을 수 없습니다.");
-          return;
-        }
-        setParty(p);
-        setMembers(ms);
+        if (!p) setError("공대를 찾을 수 없습니다.");
+        else setParty(p);
       })
       .catch(() => !cancelled && setError("공대 정보를 불러오지 못했습니다."))
       .finally(() => !cancelled && setLoading(false));
+
+    // 멤버는 실시간 구독 — 가입/탈퇴/프로필 변경이 다른 사람 화면에도 즉시 반영
+    const unsub = subscribePartyMembers(id, (ms) => {
+      if (cancelled) return;
+      setMembers(ms);
+    });
+
     return () => {
       cancelled = true;
+      unsub();
     };
   }, [id, user]);
 

@@ -6,6 +6,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  onSnapshot,
   orderBy,
   query,
   updateDoc,
@@ -30,6 +31,24 @@ export async function listPartyMembers(partyId: Party["id"]): Promise<Member[]> 
   );
   const snap = await getDocs(q);
   return snap.docs.map((d) => d.data() as Member);
+}
+
+/**
+ * 멤버 목록 실시간 구독. 다른 사람이 가입/탈퇴/프로필 변경 시 자동 업데이트.
+ * 반환된 unsubscribe를 cleanup에서 호출.
+ */
+export function subscribePartyMembers(
+  partyId: Party["id"],
+  cb: (members: Member[]) => void,
+): () => void {
+  const db = getFirebaseDb();
+  const q = query(
+    collection(db, "parties", partyId, "members"),
+    orderBy("joinedAt", "asc"),
+  );
+  return onSnapshot(q, (snap) => {
+    cb(snap.docs.map((d) => d.data() as Member));
+  });
 }
 
 /**

@@ -12,6 +12,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { getUidFromRequest } from "@/lib/auth/server";
+import { getRaidContent } from "@/lib/raid/contents";
 import type { Member } from "@/types";
 
 export const runtime = "nodejs";
@@ -60,6 +61,7 @@ export async function POST(req: NextRequest) {
 
   const partyDoc = partySnap.docs[0]!;
   const partyId = partyDoc.id;
+  const partyData = partyDoc.data() as { raidContentId?: string };
 
   const memberRef = db.doc(`parties/${partyId}/members/${uid}`);
   const userRef = db.doc(`users/${uid}`);
@@ -68,6 +70,18 @@ export async function POST(req: NextRequest) {
   if (existing.exists) {
     // 이미 가입된 경우: 멱등하게 성공으로 응답 (가입 페이지 → 공대 페이지로 이동)
     return NextResponse.json({ partyId, alreadyMember: true });
+  }
+
+  // 정원 초과 체크. raid.partySize 기준 (현재 모든 활성 컨텐츠는 8인).
+  const raid = partyData.raidContentId ? getRaidContent(partyData.raidContentId) : undefined;
+  const maxSize = raid?.partySize ?? 8;
+  const membersSnap = await db.collection(`parties/${partyId}/members`).count().get();
+  const currentCount = membersSnap.data().count;
+  if (currentCount >= maxSize) {
+    return NextResponse.json(
+      { error: `공대 정원(${maxSize}명)이 가득 찼습니다.` },
+      { status: 409 },
+    );
   }
 
   const now = Date.now();
