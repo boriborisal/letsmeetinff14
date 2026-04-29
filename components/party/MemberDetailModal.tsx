@@ -183,23 +183,20 @@ export function MemberDetailModal({
 
         {/* 위험 영역: 강퇴 (리더 + 본인 외 + 일반 멤버 한정) */}
         {canKick ? (
-          <section className="border-t border-border pt-4">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-xs text-muted-foreground">
-                강퇴하면 이 공대원은 바로 공대에서 빠집니다.
-              </p>
+          <section className="flex items-center justify-end border-t border-border pt-4">
+            <div className="flex flex-col items-end gap-1.5">
               <button
                 type="button"
                 onClick={() => void onKick()}
                 disabled={kicking}
-                className="shrink-0 rounded-md border border-destructive/50 bg-destructive/10 px-3 py-1.5 text-sm text-destructive transition hover:bg-destructive/20 disabled:opacity-50"
+                className="shrink-0 rounded-md bg-red-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-600 disabled:opacity-50"
               >
                 {kicking ? "강퇴 중…" : "강퇴"}
               </button>
+              {kickError ? (
+                <p className="text-xs text-red-500">{kickError}</p>
+              ) : null}
             </div>
-            {kickError ? (
-              <p className="mt-1.5 text-xs text-destructive">{kickError}</p>
-            ) : null}
           </section>
         ) : null}
       </div>
