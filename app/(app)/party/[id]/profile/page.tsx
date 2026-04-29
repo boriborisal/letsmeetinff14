@@ -31,12 +31,13 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // form state
+  // form state — 첫 설정(profileSetup=false) 시엔 server/mainJob/mainSlot null로 시작
+  // → 사용자가 의식적으로 선택해야 함
   const [charName, setCharName] = useState("");
-  const [server, setServer] = useState<Server>("Moogle");
-  const [mainJob, setMainJob] = useState<Job>("WAR");
+  const [server, setServer] = useState<Server | null>(null);
+  const [mainJob, setMainJob] = useState<Job | null>(null);
   const [subJobs, setSubJobs] = useState<Set<Job>>(new Set());
-  const [mainSlot, setMainSlot] = useState<Slot>("MT");
+  const [mainSlot, setMainSlot] = useState<Slot | null>(null);
   const [changeSlots, setChangeSlots] = useState<Set<Slot>>(new Set());
   const [fflogsUrl, setFflogsUrl] = useState("");
   const [bio, setBio] = useState("");
@@ -57,10 +58,13 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
         setMember(m);
         setAllMembers(all);
         setCharName(m.charName);
-        setServer(m.server);
-        setMainJob(m.mainJob);
+        // 첫 설정 (profileSetup이 명시적으로 false): 핵심 필드 비우기 → 강제 선택
+        // 기존 사용자(필드 자체 없음 = undefined): 기존 값 그대로
+        const isFirstSetup = m.profileSetup === false;
+        setServer(isFirstSetup ? null : m.server);
+        setMainJob(isFirstSetup ? null : m.mainJob);
+        setMainSlot(isFirstSetup ? null : m.mainSlot);
         setSubJobs(new Set(m.subJobs));
-        setMainSlot(m.mainSlot);
         setChangeSlots(new Set(m.changeSlots));
         setFflogsUrl(m.fflogsUrl ?? "");
         setBio(m.bio ?? "");
@@ -104,6 +108,9 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
     e.preventDefault();
     if (!user) return;
     if (!charName.trim()) return setSaveError("캐릭명을 입력해주세요.");
+    if (!server) return setSaveError("서버를 선택해주세요.");
+    if (!mainJob) return setSaveError("메인 잡을 선택해주세요.");
+    if (!mainSlot) return setSaveError("메인 자리를 선택해주세요.");
 
     // 메인 잡은 가능 잡 목록에서 제외 (중복 방지)
     const finalSubJobs = Array.from(subJobs).filter((j) => j !== mainJob);
@@ -169,7 +176,13 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
             />
           </Field>
 
-          <Field label="서버">
+          <Field
+            label={
+              <span className="inline-flex items-center gap-1">
+                서버 <span className="text-destructive">*</span>
+              </span>
+            }
+          >
             <div className="flex flex-wrap gap-2">
               {ALL_SERVERS.map((s) => (
                 <Chip
@@ -190,9 +203,11 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
           <h2 className="text-sm font-medium">직업</h2>
 
           <div className="space-y-3">
-            <p className="text-xs text-muted-foreground">메인 잡 (1개)</p>
+            <p className="text-xs text-muted-foreground">
+              메인 잡 (1개) <span className="text-destructive">*</span>
+            </p>
             <RoleGroupedJobs
-              selected={new Set([mainJob])}
+              selected={mainJob ? new Set([mainJob]) : new Set()}
               onPick={(j) => setMainJob(j)}
             />
           </div>
@@ -204,7 +219,7 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
             <RoleGroupedJobs
               selected={subJobs}
               onPick={toggleSubJob}
-              disabledJobs={new Set([mainJob])}
+              disabledJobs={mainJob ? new Set([mainJob]) : new Set()}
             />
           </div>
         </section>
@@ -215,10 +230,10 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
 
           <div className="space-y-3">
             <p className="text-xs text-muted-foreground">
-              메인 자리 (1개) — 다른 공대원이 이미 잡은 자리는 선택 불가
+              메인 자리 (1개) <span className="text-destructive">*</span> — 다른 공대원이 이미 잡은 자리는 선택 불가
             </p>
             <SlotGrid
-              selected={new Set([mainSlot])}
+              selected={mainSlot ? new Set([mainSlot]) : new Set()}
               onPick={(s) => setMainSlot(s)}
               disabledSlots={takenMainSlots}
             />
@@ -231,7 +246,7 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
             <SlotGrid
               selected={changeSlots}
               onPick={toggleChangeSlot}
-              disabledSlots={new Set([mainSlot])}
+              disabledSlots={mainSlot ? new Set([mainSlot]) : new Set()}
             />
           </div>
         </section>
@@ -290,7 +305,7 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
 // 작은 sub-components
 // ─────────────────────────────────────────────
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
   return (
     <label className="block space-y-1.5">
       <span className="text-xs text-muted-foreground">{label}</span>

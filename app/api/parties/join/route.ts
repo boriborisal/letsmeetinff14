@@ -90,12 +90,13 @@ export async function POST(req: NextRequest) {
     uid,
     role: "member",
     charName,
-    server: "Moogle",     // 임시 default — 프로필에서 변경
-    mainJob: "WAR",       // 임시 default
+    server: "Moogle",     // placeholder — profileSetup=false라 사용자 선택 강제됨
+    mainJob: "WAR",
     subJobs: [],
-    mainSlot: "MT",       // 임시 default
+    mainSlot: "MT",
     changeSlots: [],
     joinedAt: now,
+    profileSetup: false,
   };
 
   const batch = db.batch();

@@ -69,17 +69,19 @@ export async function createParty(input: CreatePartyInput): Promise<{ partyId: s
   const userRef = doc(db, "users", input.leader.uid);
 
   // 멤버 doc은 charName만 있는 placeholder. 나머지는 프로필 페이지에서 채움.
+  // profileSetup=false → 첫 프로필 페이지 진입 시 server/mainJob/mainSlot 빈 상태로 시작.
   const memberDoc = {
     partyId,
     uid: input.leader.uid,
     role: "leader" as const,
     charName: input.leader.charName,
-    server: "Moogle" as const, // 임시 default — 프로필에서 변경
-    mainJob: "WAR" as const,   // 임시 default
+    server: "Moogle" as const, // placeholder — 사용자가 의식적으로 선택해야 함
+    mainJob: "WAR" as const,
     subJobs: [],
-    mainSlot: "MT" as const,   // 임시 default
+    mainSlot: "MT" as const,
     changeSlots: [],
     joinedAt: now,
+    profileSetup: false,
   };
 
   const batch = writeBatch(db);

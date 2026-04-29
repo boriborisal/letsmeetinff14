@@ -132,6 +132,10 @@ export interface Member {
   fflogsUrl?: string;           // 프프로그 URL — 텍스트로만 저장
   bio?: string;                 // 한 줄 자기소개
   joinedAt: number;
+  // 사용자가 한 번이라도 프로필을 직접 저장했는지. 가입/생성 시엔 false (또는 미정).
+  // false면 profile 페이지에서 server/mainJob/mainSlot을 빈 상태로 시작 → 강제 선택.
+  // 기존 데이터(필드 자체 없음)는 true로 간주 (과거 사용자에 영향 X).
+  profileSetup?: boolean;
 }
 
 // ─────────────────────────────────────────────

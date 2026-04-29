@@ -81,5 +81,7 @@ export async function updateMyMemberProfile(
     update[k] = v === undefined ? deleteField() : v;
   }
   if (Object.keys(update).length === 0) return;
+  // 사용자가 의식적으로 저장 → profileSetup=true (이후 프로필 화면에서 빈 상태로 시작 안 함)
+  update.profileSetup = true;
   await updateDoc(doc(db, "parties", partyId, "members", uid), update);
 }
