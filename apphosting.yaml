@@ -1,0 +1,103 @@
+# Firebase App Hosting 설정.
+# 도큐먼트: https://firebase.google.com/docs/app-hosting/configure
+#
+# 흐름:
+#   1) Firebase Console → App Hosting → 새 백엔드 → GitHub 리포(boriborisal/fftuning) 연결
+#   2) 리전 선택 (asia-east1 또는 asia-northeast1 — 한국에서 둘 다 빠름)
+#   3) Secret Manager에 비밀 4개 생성 (아래 secret: 항목들)
+#   4) main 브랜치 푸시 → 자동 빌드/배포
+#
+# 첫 배포 후 받은 URL을 NEXT_PUBLIC_APP_URL / DISCORD_REDIRECT_URI 갱신 →
+# Discord Developer Portal Redirects에도 추가.
+
+runConfig:
+  cpu: 1
+  memoryMiB: 512
+  maxInstances: 10
+  minInstances: 0
+  concurrency: 80
+
+env:
+  # ─── Firebase 클라이언트 (공개 OK, 빌드+런타임 모두 필요) ───
+  - variable: NEXT_PUBLIC_FIREBASE_API_KEY
+    value: AIzaSyAAyUrqWvJvCiw4lXtCkWVfUJRIPxq2RXU
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+    value: fftuning-fef30.firebaseapp.com
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    value: fftuning-fef30
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    value: fftuning-fef30.firebasestorage.app
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+    value: "278614186138"
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_FIREBASE_APP_ID
+    value: "1:278614186138:web:bd4cf580a357a5856b6723"
+    availability:
+      - BUILD
+      - RUNTIME
+
+  # ─── 앱 URL / OAuth Redirect (배포 후 실제 도메인으로 갱신) ───
+  - variable: NEXT_PUBLIC_APP_URL
+    value: https://CHANGE-ME.hosted.app
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: DISCORD_REDIRECT_URI
+    value: https://CHANGE-ME.hosted.app/api/auth/discord/callback
+    availability:
+      - RUNTIME
+
+  # ─── 평문 ID들 (시크릿 아님) ───
+  - variable: FIREBASE_ADMIN_PROJECT_ID
+    value: fftuning-fef30
+    availability:
+      - RUNTIME
+
+  - variable: DISCORD_CLIENT_ID
+    value: "1498543591788773416"
+    availability:
+      - RUNTIME
+
+  # ─── 비밀: Google Secret Manager 참조 ───
+  # 아래 4개는 사용자가 Secret Manager에 미리 생성. id는 정확히 일치해야 함.
+  #   gcloud secrets create firebase-admin-private-key --data-file=- < <(echo -n "<value>")
+  #   ...등
+  - variable: FIREBASE_ADMIN_PRIVATE_KEY
+    secret: firebase-admin-private-key
+    availability:
+      - RUNTIME
+
+  - variable: FIREBASE_ADMIN_CLIENT_EMAIL
+    secret: firebase-admin-client-email
+    availability:
+      - RUNTIME
+
+  - variable: DISCORD_CLIENT_SECRET
+    secret: discord-client-secret
+    availability:
+      - RUNTIME
+
+  - variable: AUTH_SECRET
+    secret: auth-secret
+    availability:
+      - RUNTIME
