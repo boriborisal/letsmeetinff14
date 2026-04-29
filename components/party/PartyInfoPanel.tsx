@@ -229,6 +229,12 @@ export function PartyInfoPanel({
             ? weekAvailabilities.find((a) => a.uid === selectedMember.uid)
             : undefined
         }
+        partyId={party.id}
+        viewerUid={uid}
+        viewerIsLeader={isLeader}
+        onKicked={() => {
+          // 강퇴 후 모달은 자동 닫힘. 멤버 목록은 onSnapshot으로 자동 갱신.
+        }}
       />
     </aside>
   );

@@ -1,11 +1,13 @@
 "use client";
 
 // 공대원 상세 모달: 프로필(직업·자리·프프로그·자기소개) + 현재 주 가능 시간 그리드 (read-only).
+// 리더가 본인 외 멤버를 보면 [강퇴] 버튼 노출.
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Modal } from "@/components/common/Modal";
 import { JobIcon } from "@/components/common/JobIcon";
 import { AvailabilityGrid } from "@/components/availability/AvailabilityGrid";
+import { kickMember } from "@/lib/firestore/kickClient";
 import {
   JOB_KOR,
   ROLE_KOR,
@@ -26,6 +28,13 @@ interface Props {
   weekStart: string;
   // 부모가 가진 weekAvailabilities에서 멤버용을 미리 찾아 전달
   memberAvailability: Availability | undefined;
+  /** 모달을 보고 있는 사용자의 uid (강퇴 버튼 표시 판단용) */
+  viewerUid: string;
+  /** 모달을 보고 있는 사용자가 공대장인가 */
+  viewerIsLeader: boolean;
+  /** 강퇴된 후 호출 (모달 닫기 등) */
+  onKicked?: () => void;
+  partyId: string;
 }
 
 export function MemberDetailModal({
@@ -35,7 +44,33 @@ export function MemberDetailModal({
   raid,
   weekStart,
   memberAvailability,
+  viewerUid,
+  viewerIsLeader,
+  onKicked,
+  partyId,
 }: Props) {
+  const [kicking, setKicking] = useState(false);
+  const [kickError, setKickError] = useState<string | null>(null);
+
+  const canKick = !!member && viewerIsLeader && member.uid !== viewerUid && member.role !== "leader";
+
+  async function onKick() {
+    if (!member) return;
+    if (!window.confirm(`정말 ${member.charName}님을 강퇴하시겠습니까?\n다시 참여하려면 새 초대 코드로 가입해야 합니다.`)) {
+      return;
+    }
+    setKicking(true);
+    setKickError(null);
+    try {
+      await kickMember({ partyId, uid: member.uid });
+      onKicked?.();
+      onClose();
+    } catch (err) {
+      setKickError(err instanceof Error ? err.message : "강퇴 실패");
+    } finally {
+      setKicking(false);
+    }
+  }
   const tier = raid?.tier ?? "ultimate";
   const reelLen = useMemo(() => reelSlotsForTier(tier), [tier]);
   const memberSlots = useMemo(
@@ -141,9 +176,32 @@ export function MemberDetailModal({
               mode="input"
               selfSlots={memberSlots}
               othersCount={new Map()}
+              disableTooltip
             />
           </div>
         </section>
+
+        {/* 위험 영역: 강퇴 (리더 + 본인 외 + 일반 멤버 한정) */}
+        {canKick ? (
+          <section className="border-t border-border pt-4">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs text-muted-foreground">
+                강퇴 시 멤버 doc 삭제 + 사용자의 partyIds에서 제거됩니다.
+              </p>
+              <button
+                type="button"
+                onClick={() => void onKick()}
+                disabled={kicking}
+                className="shrink-0 rounded-md border border-destructive/50 bg-destructive/10 px-3 py-1.5 text-sm text-destructive transition hover:bg-destructive/20 disabled:opacity-50"
+              >
+                {kicking ? "강퇴 중…" : "강퇴"}
+              </button>
+            </div>
+            {kickError ? (
+              <p className="mt-1.5 text-xs text-destructive">{kickError}</p>
+            ) : null}
+          </section>
+        ) : null}
       </div>
     </Modal>
   );
