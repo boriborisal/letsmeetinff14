@@ -118,54 +118,60 @@ export function PartyInfoPanel({
             편집
           </Link>
         </div>
-        <dl className="space-y-1 text-[15px]">
-          <Row label="캐릭" value={`${myMember.charName} (${SERVER_KOR[myMember.server]})`} />
-          <Row
-            label="메인"
-            value={
-              <span className="inline-flex items-center gap-1.5">
-                {myMember.mainSlot} · <JobIcon job={myMember.mainJob} size={18} />
-                {JOB_KOR[myMember.mainJob]}
-              </span>
-            }
-          />
-          <Row
-            label="가능 잡"
-            value={
-              myMember.subJobs.length ? (
-                <span className="inline-flex flex-wrap items-center gap-x-1.5 gap-y-1">
-                  {myMember.subJobs.map((j) => (
-                    <span key={j} className="inline-flex items-center gap-1">
-                      <JobIcon job={j} size={16} />
-                      {JOB_KOR[j]}
-                    </span>
-                  ))}
-                </span>
-              ) : (
-                "없음"
-              )
-            }
-          />
-          <Row
-            label="체인지"
-            value={myMember.changeSlots.length ? myMember.changeSlots.join(", ") : "없음"}
-          />
-          {myMember.fflogsUrl ? (
+        {myMember.profileSetup === false ? (
+          <p className="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            프로필 미설정 — 우상단 [편집]에서 서버·직업·자리를 설정해주세요.
+          </p>
+        ) : (
+          <dl className="space-y-1 text-[15px]">
+            <Row label="캐릭" value={`${myMember.charName} (${SERVER_KOR[myMember.server]})`} />
             <Row
-              label="FFLogs"
+              label="메인"
               value={
-                <a
-                  href={myMember.fflogsUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="underline underline-offset-2 hover:text-foreground"
-                >
-                  링크
-                </a>
+                <span className="inline-flex items-center gap-1.5">
+                  {myMember.mainSlot} · <JobIcon job={myMember.mainJob} size={18} />
+                  {JOB_KOR[myMember.mainJob]}
+                </span>
               }
             />
-          ) : null}
-        </dl>
+            <Row
+              label="가능 잡"
+              value={
+                myMember.subJobs.length ? (
+                  <span className="inline-flex flex-wrap items-center gap-x-1.5 gap-y-1">
+                    {myMember.subJobs.map((j) => (
+                      <span key={j} className="inline-flex items-center gap-1">
+                        <JobIcon job={j} size={16} />
+                        {JOB_KOR[j]}
+                      </span>
+                    ))}
+                  </span>
+                ) : (
+                  "없음"
+                )
+              }
+            />
+            <Row
+              label="체인지"
+              value={myMember.changeSlots.length ? myMember.changeSlots.join(", ") : "없음"}
+            />
+            {myMember.fflogsUrl ? (
+              <Row
+                label="FFLogs"
+                value={
+                  <a
+                    href={myMember.fflogsUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline underline-offset-2 hover:text-foreground"
+                  >
+                    링크
+                  </a>
+                }
+              />
+            ) : null}
+          </dl>
+        )}
       </section>
 
       {/* 공대원 목록 */}
@@ -176,7 +182,7 @@ export function PartyInfoPanel({
         <ul className="divide-y divide-border overflow-hidden rounded-md border border-border bg-card">
           {members.map((m) => {
             const submitted = submittedUids.has(m.uid);
-            // 옅은 틴트만. 다크 모드에서도 텍스트 가독성 유지.
+            const profileSet = m.profileSetup !== false;
             const bg = submitted
               ? "rgba(34, 197, 94, 0.25)"   // green tint
               : "rgba(239, 68, 68, 0.25)";  // red tint
@@ -202,11 +208,17 @@ export function PartyInfoPanel({
                         </span>
                       ) : null}
                     </p>
-                    <p className="flex items-center gap-1 truncate text-base text-muted-foreground">
-                      <span>{SERVER_KOR[m.server]} ·</span>
-                      <JobIcon job={m.mainJob} size={18} />
-                      <span>{JOB_KOR[m.mainJob]} · {m.mainSlot}</span>
-                    </p>
+                    {profileSet ? (
+                      <p className="flex items-center gap-1 truncate text-base text-muted-foreground">
+                        <span>{SERVER_KOR[m.server]} ·</span>
+                        <JobIcon job={m.mainJob} size={18} />
+                        <span>{JOB_KOR[m.mainJob]} · {m.mainSlot}</span>
+                      </p>
+                    ) : (
+                      <p className="truncate text-base text-muted-foreground">
+                        프로필 미설정
+                      </p>
+                    )}
                   </div>
                 </button>
               </li>

@@ -79,6 +79,7 @@ export function MemberDetailModal({
   );
 
   if (!member) return null;
+  const profileSet = member.profileSetup !== false;
 
   return (
     <Modal open={open} onClose={onClose}>
@@ -94,7 +95,7 @@ export function MemberDetailModal({
               ) : null}
             </h2>
             <p className="text-sm text-muted-foreground">
-              {SERVER_KOR[member.server]}
+              {profileSet ? SERVER_KOR[member.server] : "프로필 미설정"}
             </p>
           </div>
           <button
@@ -107,7 +108,15 @@ export function MemberDetailModal({
           </button>
         </div>
 
-        {/* 프로필 정보 */}
+        {/* 프로필 미설정 안내 */}
+        {!profileSet ? (
+          <p className="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            이 공대원은 아직 프로필(서버·직업·자리)을 설정하지 않았습니다.
+          </p>
+        ) : null}
+
+        {/* 프로필 정보 (설정된 경우만) */}
+        {profileSet ? (
         <dl className="space-y-2 text-sm">
           <ProfileRow label="메인">
             <span className="inline-flex items-center gap-1.5">
@@ -160,6 +169,7 @@ export function MemberDetailModal({
             </ProfileRow>
           ) : null}
         </dl>
+        ) : null}
 
         {/* 가능 시간 그리드 (read-only, 본인 슬롯만 .on) */}
         <section className="space-y-2">
