@@ -115,6 +115,8 @@ export interface Party {
   createdAt: number;
   inviteCode: string;
   progressNote?: string;        // 진도 메모 (자유 텍스트, 모든 멤버 편집 가능)
+  reelsPerSession?: number;     // 한 세션에 진행할 1릴 개수 (1~4, default 1).
+                                // 추천 카드/일정 확정 길이의 기준.
 }
 
 export interface Member {

@@ -25,6 +25,7 @@ import type { Party, RaidContent, User } from "@/types";
 export interface CreatePartyInput {
   name?: string;                 // 비우면 raid shortKor 기반으로 자동 생성
   raidContentId: RaidContent["id"];
+  reelsPerSession?: number;      // default 1
   leader: { uid: User["uid"]; charName: string };
 }
 
@@ -60,6 +61,7 @@ export async function createParty(input: CreatePartyInput): Promise<{ partyId: s
     leaderUid: input.leader.uid,
     createdAt: now,
     inviteCode,
+    reelsPerSession: clampReels(input.reelsPerSession ?? 1),
   };
 
   const partyRef = doc(db, "parties", partyId);
@@ -95,14 +97,20 @@ export async function createParty(input: CreatePartyInput): Promise<{ partyId: s
  */
 export async function updateParty(
   partyId: string,
-  patch: { name?: string; raidContentId?: RaidContent["id"] },
+  patch: { name?: string; raidContentId?: RaidContent["id"]; reelsPerSession?: number },
 ): Promise<void> {
   const db = getFirebaseDb();
   const update: Record<string, unknown> = {};
   if (patch.name !== undefined) update.name = patch.name;
   if (patch.raidContentId !== undefined) update.raidContentId = patch.raidContentId;
+  if (patch.reelsPerSession !== undefined) update.reelsPerSession = clampReels(patch.reelsPerSession);
   if (Object.keys(update).length === 0) return;
   await updateDoc(doc(db, "parties", partyId), update);
+}
+
+function clampReels(n: number): number {
+  if (!Number.isFinite(n)) return 1;
+  return Math.min(4, Math.max(1, Math.round(n)));
 }
 
 export { defaultPartyName };

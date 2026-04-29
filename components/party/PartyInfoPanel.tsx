@@ -35,8 +35,8 @@ export function PartyInfoPanel({ party, members, myMember, uid, onPartyUpdated }
   const isLeader = uid === party.leaderUid;
   const raid = getRaidContent(party.raidContentId);
   const reelMin = raid ? REEL_MIN_BY_TIER[raid.tier] : 120;
-  const reelHr = reelMin / 60;
-  const reelLabel = Number.isInteger(reelHr) ? `${reelHr}시간` : `${reelHr.toFixed(1)}시간`;
+  const reels = party.reelsPerSession ?? 1;
+  const sessionLabel = `${reels}릴 (${formatMin(reelMin * reels)})`;
 
   return (
     <aside className="space-y-5">
@@ -46,7 +46,7 @@ export function PartyInfoPanel({ party, members, myMember, uid, onPartyUpdated }
           <h1 className="truncate text-xl font-semibold tracking-tight">{party.name}</h1>
           <p className="text-base text-muted-foreground">
             {raid?.nameKor ?? party.raidContentId}
-            <span className="text-muted-foreground/70"> · 1릴 {reelLabel}</span>
+            <span className="text-muted-foreground/70"> · 세션 {sessionLabel}</span>
           </p>
         </div>
         {isLeader && !editing ? (
@@ -210,8 +210,14 @@ function EditPartyForm({
   const raids = useMemo(() => activeRaidContents(), []);
   const [name, setName] = useState(party.name);
   const [raidId, setRaidId] = useState(party.raidContentId);
+  const [reelsPerSession, setReelsPerSession] = useState<number>(party.reelsPerSession ?? 1);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const reelMin = useMemo(() => {
+    const r = getRaidContent(raidId);
+    return r ? REEL_MIN_BY_TIER[r.tier] : 120;
+  }, [raidId]);
 
   const grouped = useMemo(() => {
     const sav = raids.filter((r) => r.tier === "savage_4" || r.tier === "savage_1_3");
@@ -227,8 +233,17 @@ function EditPartyForm({
     setSaving(true);
     setError(null);
     try {
-      await updateParty(party.id, { name: finalName, raidContentId: raidId });
-      onSaved({ ...party, name: finalName, raidContentId: raidId });
+      await updateParty(party.id, {
+        name: finalName,
+        raidContentId: raidId,
+        reelsPerSession,
+      });
+      onSaved({
+        ...party,
+        name: finalName,
+        raidContentId: raidId,
+        reelsPerSession,
+      });
     } catch (err) {
       console.error(err);
       setError("수정에 실패했습니다.");
@@ -277,6 +292,23 @@ function EditPartyForm({
               <option key={r.id} value={r.id}>{r.nameKor}</option>
             ))}
           </optgroup>
+        </select>
+      </div>
+      <div className="space-y-1">
+        <label htmlFor="edit-reels" className="text-[15px] text-muted-foreground">
+          한 세션에 진행할 1릴 개수
+        </label>
+        <select
+          id="edit-reels"
+          value={reelsPerSession}
+          onChange={(e) => setReelsPerSession(Number(e.target.value))}
+          className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-base outline-none focus:border-foreground"
+        >
+          {[1, 2, 3, 4].map((n) => (
+            <option key={n} value={n}>
+              {n}릴 ({formatMin(reelMin * n)})
+            </option>
+          ))}
         </select>
       </div>
       {error ? (
@@ -453,4 +485,11 @@ function LeavePartySection({
       ) : null}
     </div>
   );
+}
+
+function formatMin(min: number): string {
+  if (min < 60) return `${min}분`;
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return m === 0 ? `${h}시간` : `${h}시간 ${m}분`;
 }

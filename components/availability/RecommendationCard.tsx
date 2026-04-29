@@ -14,6 +14,7 @@ interface Props {
   partyId: string;
   isLeader: boolean;
   uid: string;
+  reelsPerSession: number;     // 공대 설정. 추천/확정 길이 단위
   onConfirmed: () => void;
 }
 
@@ -22,33 +23,47 @@ export function RecommendationCard({
   partyId,
   isLeader,
   uid,
+  reelsPerSession,
   onConfirmed,
 }: Props) {
-  const groups = useMemo(() => groupConsecutiveDepartable(feasibility), [feasibility]);
+  // 연속 1릴 그룹 → reelsPerSession 길이 sliding window로 후보 생성
+  const candidates = useMemo(() => {
+    const groups = groupConsecutiveDepartable(feasibility);
+    const out: ReelFeasibility[][] = [];
+    for (const g of groups) {
+      if (g.length < reelsPerSession) continue;
+      for (let i = 0; i + reelsPerSession <= g.length; i++) {
+        out.push(g.slice(i, i + reelsPerSession));
+      }
+    }
+    return out;
+  }, [feasibility, reelsPerSession]);
 
-  // 추천: 가장 긴 그룹 → 동률이면 주말(토=6, 일=0) 우선
+  // 추천: 주말 시작 우선, 그 외 시간 빠른 순
   const recommended = useMemo(() => {
-    if (groups.length === 0) return null;
-    const sorted = [...groups].sort((a, b) => {
-      if (b.length !== a.length) return b.length - a.length;
-      const aIsWeekend = isWeekendStart(a[0]!.reel.startKey);
-      const bIsWeekend = isWeekendStart(b[0]!.reel.startKey);
-      if (aIsWeekend && !bIsWeekend) return -1;
-      if (!aIsWeekend && bIsWeekend) return 1;
+    if (candidates.length === 0) return null;
+    const sorted = [...candidates].sort((a, b) => {
+      const aWe = isWeekendStart(a[0]!.reel.startKey);
+      const bWe = isWeekendStart(b[0]!.reel.startKey);
+      if (aWe && !bWe) return -1;
+      if (!aWe && bWe) return 1;
       return a[0]!.reel.startKey < b[0]!.reel.startKey ? -1 : 1;
     });
     return sorted[0]!;
-  }, [groups]);
+  }, [candidates]);
 
   const others = useMemo(
-    () => (recommended ? groups.filter((g) => g !== recommended) : []),
-    [groups, recommended],
+    () =>
+      recommended
+        ? candidates.filter((c) => c[0]!.reel.startKey !== recommended[0]!.reel.startKey)
+        : [],
+    [candidates, recommended],
   );
 
   if (!recommended) {
     return (
       <div className="rounded-md border border-border bg-card px-4 py-3 text-base text-muted-foreground">
-        아직 출발 가능한 1릴이 없습니다. 모든 공대원의 가능 시간 응답이 모이면 표시됩니다.
+        {reelsPerSession}릴 연속 출발 가능한 시간이 아직 없습니다. 모든 공대원의 응답이 모이면 표시됩니다.
       </div>
     );
   }

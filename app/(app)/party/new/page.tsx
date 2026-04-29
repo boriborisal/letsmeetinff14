@@ -3,8 +3,9 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { activeRaidContents } from "@/lib/raid/contents";
+import { activeRaidContents, getRaidContent } from "@/lib/raid/contents";
 import { createParty } from "@/lib/firestore/parties";
+import { REEL_MIN_BY_TIER } from "@/types";
 
 export default function NewPartyPage() {
   const { user } = useAuth();
@@ -13,9 +14,16 @@ export default function NewPartyPage() {
 
   const [name, setName] = useState("");
   const [raidId, setRaidId] = useState<string>(raids[0]?.id ?? "");
+  const [reelsPerSession, setReelsPerSession] = useState<number>(1);
   const [charName, setCharName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // 1릴 분 (선택한 raid 기준)
+  const reelMin = useMemo(() => {
+    const raid = getRaidContent(raidId);
+    return raid ? REEL_MIN_BY_TIER[raid.tier] : 120;
+  }, [raidId]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -29,6 +37,7 @@ export default function NewPartyPage() {
       const { partyId } = await createParty({
         name: name.trim(),
         raidContentId: raidId,
+        reelsPerSession,
         leader: { uid: user.uid, charName: charName.trim() },
       });
       router.replace(`/party/${partyId}`);
@@ -103,7 +112,28 @@ export default function NewPartyPage() {
             </optgroup>
           </select>
           <p className="text-xs text-muted-foreground">
-            1릴 길이는 레이드 종류에 따라 자동 결정됩니다.
+            1릴 길이는 레이드 종류에 따라 자동 결정됩니다 (현재 선택: 1릴 {formatMin(reelMin)}).
+          </p>
+        </div>
+
+        <div className="space-y-1.5">
+          <label htmlFor="reels" className="text-xs text-muted-foreground">
+            한 세션에 진행할 1릴 개수
+          </label>
+          <select
+            id="reels"
+            value={reelsPerSession}
+            onChange={(e) => setReelsPerSession(Number(e.target.value))}
+            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground"
+          >
+            {[1, 2, 3, 4].map((n) => (
+              <option key={n} value={n}>
+                {n}릴 ({formatMin(reelMin * n)})
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-muted-foreground">
+            추천 시간대와 일정 확정 길이가 이 값에 맞춰 결정됩니다. 나중에 변경 가능.
           </p>
         </div>
 
@@ -141,4 +171,11 @@ export default function NewPartyPage() {
       </form>
     </main>
   );
+}
+
+function formatMin(min: number): string {
+  if (min < 60) return `${min}분`;
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return m === 0 ? `${h}시간` : `${h}시간 ${m}분`;
 }

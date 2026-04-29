@@ -225,6 +225,7 @@ export function AvailabilityPanel({ party, members, uid }: Props) {
           partyId={party.id}
           isLeader={isLeader}
           uid={uid}
+          reelsPerSession={party.reelsPerSession ?? 1}
           onConfirmed={() => setReloadKey((k) => k + 1)}
         />
       ) : null}
