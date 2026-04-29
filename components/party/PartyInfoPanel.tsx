@@ -175,10 +175,10 @@ export function PartyInfoPanel({
         <ul className="divide-y divide-border overflow-hidden rounded-md border border-border bg-card">
           {members.map((m) => {
             const submitted = submittedUids.has(m.uid);
-            // 응답 완료 = 초록 50% / 미응답 = 빨강 50% (배경 오퍼시티)
+            // 옅은 틴트만. 다크 모드에서도 텍스트 가독성 유지.
             const bg = submitted
-              ? "rgba(34, 197, 94, 0.5)"   // green/50
-              : "rgba(239, 68, 68, 0.5)";  // red/50
+              ? "rgba(34, 197, 94, 0.14)"   // green tint
+              : "rgba(239, 68, 68, 0.14)";  // red tint
             return (
               <li key={m.uid}>
                 <button
@@ -191,17 +191,17 @@ export function PartyInfoPanel({
                     <p className="truncate">
                       {m.charName}
                       {m.role === "leader" ? (
-                        <span className="ml-1.5 rounded bg-black/30 px-1 py-px text-[15px] text-white">
+                        <span className="ml-1.5 rounded bg-secondary px-1 py-px text-[15px] text-muted-foreground">
                           장
                         </span>
                       ) : null}
                       {!submitted ? (
-                        <span className="ml-1.5 rounded bg-black/30 px-1.5 py-px text-[13px] text-white">
+                        <span className="ml-1.5 rounded bg-secondary px-1.5 py-px text-[13px] text-muted-foreground">
                           일정 입력 전
                         </span>
                       ) : null}
                     </p>
-                    <p className="flex items-center gap-1 truncate text-base text-white/90">
+                    <p className="flex items-center gap-1 truncate text-base text-muted-foreground">
                       <span>{SERVER_KOR[m.server]} ·</span>
                       <JobIcon job={m.mainJob} size={18} />
                       <span>{JOB_KOR[m.mainJob]} · {m.mainSlot}</span>
