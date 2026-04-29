@@ -186,7 +186,7 @@ export function MemberDetailModal({
           <section className="border-t border-border pt-4">
             <div className="flex items-center justify-between gap-3">
               <p className="text-xs text-muted-foreground">
-                강퇴 시 멤버 doc 삭제 + 사용자의 partyIds에서 제거됩니다.
+                강퇴하면 이 공대원은 바로 공대에서 빠집니다.
               </p>
               <button
                 type="button"
