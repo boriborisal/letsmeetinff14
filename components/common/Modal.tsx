@@ -34,7 +34,7 @@ export function Modal({ open, onClose, children, className }: Props) {
     >
       <div
         className={[
-          "max-h-full w-full max-w-2xl overflow-y-auto rounded-md border border-border bg-card p-5 shadow-xl",
+          "no-scrollbar max-h-full w-full max-w-2xl overflow-y-auto rounded-md border border-border bg-card p-5 shadow-xl",
           className ?? "",
         ].join(" ")}
         onClick={(e) => e.stopPropagation()}
