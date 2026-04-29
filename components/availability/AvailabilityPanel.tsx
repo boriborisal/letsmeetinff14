@@ -257,8 +257,9 @@ export function AvailabilityPanel({
             othersCount={gridCount}
             onToggle={editable ? onToggle : undefined}
             departReelStarts={gridDepartStarts}
-            // 편집 중엔 가능한 사람 목록 숨김 (입력 집중 — 시간만 툴팁)
-            getNamesAt={(k) => (editable ? [] : namesPerSlot.get(k) ?? [])}
+            getNamesAt={(k) => namesPerSlot.get(k) ?? []}
+            // 편집 중엔 툴팁 자체 비활성 (모바일에서 호버가 클릭에 끌려가서 거슬림)
+            disableTooltip={editable}
           />
         )}
       </div>

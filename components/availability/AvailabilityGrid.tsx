@@ -29,6 +29,8 @@ export interface AvailabilityGridProps {
   departReelStarts?: Set<SlotKey>;
   /** hover 툴팁용 — 해당 슬롯에 가능 응답한 캐릭명 목록 */
   getNamesAt?: (key: SlotKey) => string[];
+  /** true면 hover 툴팁 자체를 비활성 (모바일/입력 집중 등) */
+  disableTooltip?: boolean;
 }
 
 export function AvailabilityGrid({
@@ -40,6 +42,7 @@ export function AvailabilityGrid({
   onToggle,
   departReelStarts,
   getNamesAt,
+  disableTooltip,
 }: AvailabilityGridProps) {
   const days = useMemo(() => weekDays(weekStart), [weekStart]);
   const dayWindows = useMemo(
@@ -117,6 +120,7 @@ export function AvailabilityGrid({
                           on={selfSlots.has(key)}
                           othersN={othersCount.get(key) ?? 0}
                           names={getNamesAt?.(key) ?? []}
+                          showTooltip={!disableTooltip}
                           onMouseDown={onCellMouseDown}
                           onMouseEnter={onCellMouseEnter}
                         />
@@ -139,11 +143,21 @@ interface CellProps {
   on: boolean;
   othersN: number;
   names: string[];
+  showTooltip: boolean;
   onMouseDown?: (key: SlotKey) => void;
   onMouseEnter?: (key: SlotKey) => void;
 }
 
-function Cell({ slotKey, mode, on, othersN, names, onMouseDown, onMouseEnter }: CellProps) {
+function Cell({
+  slotKey,
+  mode,
+  on,
+  othersN,
+  names,
+  showTooltip,
+  onMouseDown,
+  onMouseEnter,
+}: CellProps) {
   const cls = ["s"];
   if (mode === "input") {
     if (on) {
@@ -157,9 +171,11 @@ function Cell({ slotKey, mode, on, othersN, names, onMouseDown, onMouseEnter }: 
     cls.push("readonly");
   }
 
-  const tooltip = names.length > 0
-    ? `${formatSlotForTip(slotKey)}\n가능 (${names.length}): ${names.join(", ")}`
-    : formatSlotForTip(slotKey);
+  const tooltip = !showTooltip
+    ? undefined
+    : names.length > 0
+      ? `${formatSlotForTip(slotKey)}\n가능 (${names.length}): ${names.join(", ")}`
+      : formatSlotForTip(slotKey);
 
   return (
     <div
