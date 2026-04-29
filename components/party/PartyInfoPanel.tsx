@@ -263,7 +263,6 @@ function EditPartyForm({
           value={name}
           onChange={(e) => setName(e.target.value)}
           maxLength={40}
-          placeholder="비우면 레이드 이름으로 자동 설정"
           className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-base outline-none focus:border-foreground"
         />
       </div>
@@ -397,7 +396,6 @@ function ProgressNoteSection({
             onChange={(e) => setText(e.target.value)}
             maxLength={200}
             rows={3}
-            placeholder="예) P3 학습 중 · 5분 진입 · 매크로 v2 적용"
             className="w-full resize-none rounded-md border border-border bg-background px-2.5 py-1.5 text-base outline-none focus:border-foreground"
           />
           {error ? (

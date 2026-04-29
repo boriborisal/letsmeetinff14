@@ -287,7 +287,6 @@ function ScheduleRow({
               onChange={(e) => setReason(e.target.value)}
               onBlur={() => void saveReasonOnBlur()}
               maxLength={60}
-              placeholder="결석 사유 (선택)"
               className="ml-1 min-w-0 flex-1 rounded-md border border-border bg-background px-2 py-1 text-sm outline-none focus:border-foreground"
             />
           ) : null}

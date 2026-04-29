@@ -73,7 +73,6 @@ export default function NewPartyPage() {
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="비우면 레이드 이름으로 자동 설정"
             maxLength={40}
             className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground"
           />
@@ -146,7 +145,6 @@ export default function NewPartyPage() {
             type="text"
             value={charName}
             onChange={(e) => setCharName(e.target.value)}
-            placeholder="예: Hilda Lockhart"
             maxLength={30}
             className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-foreground"
           />
