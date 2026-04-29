@@ -135,7 +135,7 @@
   padding-top: 36px; /* 컬럼 헤더 높이 보정 */
 }
 .av-axis-label {
-  font-size: 10px;
+  font-size: 13px;
   color: var(--color-text-tertiary);
   line-height: 18px;
   padding-right: 6px;
