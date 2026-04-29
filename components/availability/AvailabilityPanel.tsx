@@ -39,12 +39,11 @@ import {
 
 interface Props {
   party: Party;
-  myMember: Member;
   members: Member[];
   uid: string;
 }
 
-export function AvailabilityPanel({ party, myMember, members, uid }: Props) {
+export function AvailabilityPanel({ party, members, uid }: Props) {
   const raid = useMemo(() => getRaidContent(party.raidContentId), [party.raidContentId]);
   const tier = raid?.tier ?? "ultimate";
   const reelLen = useMemo(() => reelSlotsForTier(tier), [tier]);

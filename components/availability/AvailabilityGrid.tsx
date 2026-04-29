@@ -8,7 +8,7 @@
 //   - INPUT: 본인 .on (파랑), 다른 공대원 .h1~.h7 (초록 농도)
 //   - 셀 클릭 토글, 드래그 페인팅 (mousedown 후 mouse over로 같은 상태 유지)
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { TimeAxis } from "./TimeAxis";
 import { buildDayWindow, weekDays } from "@/lib/datetime/week";
 import type { SlotKey } from "@/types";

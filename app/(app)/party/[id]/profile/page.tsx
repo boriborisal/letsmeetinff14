@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -182,7 +182,6 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
             <RoleGroupedJobs
               selected={new Set([mainJob])}
               onPick={(j) => setMainJob(j)}
-              mode="single"
             />
           </div>
 
@@ -194,7 +193,6 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
               selected={subJobs}
               onPick={toggleSubJob}
               disabledJobs={new Set([mainJob])}
-              mode="multi"
             />
           </div>
         </section>
@@ -205,7 +203,7 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
 
           <div className="space-y-3">
             <p className="text-xs text-muted-foreground">메인 자리 (1개)</p>
-            <SlotGrid selected={new Set([mainSlot])} onPick={(s) => setMainSlot(s)} mode="single" />
+            <SlotGrid selected={new Set([mainSlot])} onPick={(s) => setMainSlot(s)} />
           </div>
 
           <div className="space-y-3">
@@ -216,7 +214,6 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
               selected={changeSlots}
               onPick={toggleChangeSlot}
               disabledSlots={new Set([mainSlot])}
-              mode="multi"
             />
           </div>
         </section>
@@ -320,12 +317,10 @@ function RoleGroupedJobs({
   selected,
   onPick,
   disabledJobs,
-  mode,
 }: {
   selected: Set<Job>;
   onPick: (j: Job) => void;
   disabledJobs?: Set<Job>;
-  mode: "single" | "multi";
 }) {
   return (
     <div className="space-y-2">
@@ -355,12 +350,10 @@ function SlotGrid({
   selected,
   onPick,
   disabledSlots,
-  mode,
 }: {
   selected: Set<Slot>;
   onPick: (s: Slot) => void;
   disabledSlots?: Set<Slot>;
-  mode: "single" | "multi";
 }) {
   return (
     <div className="grid grid-cols-4 gap-2 sm:grid-cols-8">

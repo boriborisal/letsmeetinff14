@@ -71,7 +71,6 @@ export default function PartyDetailPage({ params }: { params: { id: string } }) 
         />
         <AvailabilityPanel
           party={party}
-          myMember={myMember}
           members={members}
           uid={user.uid}
         />
