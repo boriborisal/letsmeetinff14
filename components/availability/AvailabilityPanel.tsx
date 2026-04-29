@@ -127,21 +127,37 @@ export function AvailabilityPanel({
     return m;
   }, [othersCount, selfSlots]);
 
+  // 자리 매칭은 프로필 설정 완료된 멤버만 대상 — 미설정 멤버의 placeholder
+  // (모그리/전사/MT)가 결과를 왜곡하지 않게 제외.
+  const matchableMembers = useMemo(
+    () => members.filter((m) => m.profileSetup !== false),
+    [members],
+  );
+  const matchableUids = useMemo(
+    () => new Set(matchableMembers.map((m) => m.uid)),
+    [matchableMembers],
+  );
+  const unsetCount = members.length - matchableMembers.length;
+
   // 출발 가능 1릴 (상시 — 편집 중에도 selfSlots(=draft) 기준 live preview)
   const feasibility: ReelFeasibility[] = useMemo(() => {
     const slotKeys = weekWindowSlotKeys(weekStart, reelLen);
     const windows = buildReelWindows(slotKeys, tier);
     const allAvail: { uid: string; available: SlotKey[] }[] = [
-      ...othersAvail.map((a) => ({ uid: a.uid, available: a.available })),
-      { uid, available: Array.from(selfSlots) },
+      ...othersAvail
+        .filter((a) => matchableUids.has(a.uid))
+        .map((a) => ({ uid: a.uid, available: a.available })),
     ];
+    if (matchableUids.has(uid)) {
+      allAvail.push({ uid, available: Array.from(selfSlots) });
+    }
     return evaluateReels({
       tier,
-      members,
+      members: matchableMembers,
       availabilities: allAvail,
       windows,
     });
-  }, [weekStart, reelLen, tier, othersAvail, selfSlots, uid, members]);
+  }, [weekStart, reelLen, tier, othersAvail, selfSlots, uid, matchableMembers, matchableUids]);
 
   const departReelStarts = useMemo(
     () => new Set(feasibility.filter((f) => f.canDepart).map((f) => f.reel.startKey)),
@@ -241,6 +257,7 @@ export function AvailabilityPanel({
           isLeader={isLeader}
           uid={uid}
           reelsPerSession={party.reelsPerSession ?? 1}
+          unsetMemberCount={unsetCount}
           onConfirmed={() => { /* 일정 확정은 ScheduleList가 자체 onSnapshot으로 갱신 */ }}
         />
       ) : null}

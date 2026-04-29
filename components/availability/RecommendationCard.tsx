@@ -15,6 +15,7 @@ interface Props {
   isLeader: boolean;
   uid: string;
   reelsPerSession: number;     // 공대 설정. 추천/확정 길이 단위
+  unsetMemberCount?: number;   // 프로필 미설정으로 매칭에서 제외된 멤버 수
   onConfirmed: () => void;
 }
 
@@ -24,6 +25,7 @@ export function RecommendationCard({
   isLeader,
   uid,
   reelsPerSession,
+  unsetMemberCount = 0,
   onConfirmed,
 }: Props) {
   // 연속 1릴 그룹 → reelsPerSession 길이 sliding window로 후보 생성
@@ -60,16 +62,26 @@ export function RecommendationCard({
     [candidates, recommended],
   );
 
+  const unsetNote = unsetMemberCount > 0 ? (
+    <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-600 dark:text-amber-400">
+      프로필 미설정 {unsetMemberCount}명은 자리 매칭에서 제외됨 — 정확한 추천을 위해 모두 설정 권장.
+    </p>
+  ) : null;
+
   if (!recommended) {
     return (
-      <div className="rounded-md border border-border bg-card px-4 py-3 text-base text-muted-foreground">
-        {reelsPerSession}릴 연속 출발 가능한 시간이 아직 없습니다. 모든 공대원의 응답이 모이면 표시됩니다.
+      <div className="space-y-2">
+        {unsetNote}
+        <div className="rounded-md border border-border bg-card px-4 py-3 text-base text-muted-foreground">
+          {reelsPerSession}릴 연속 출발 가능한 시간이 아직 없습니다. 모든 공대원의 응답이 모이면 표시됩니다.
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-3">
+      {unsetNote}
       <RecommendedBlock
         group={recommended}
         partyId={partyId}
