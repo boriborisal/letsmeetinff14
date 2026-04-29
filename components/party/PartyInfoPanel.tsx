@@ -177,8 +177,8 @@ export function PartyInfoPanel({
             const submitted = submittedUids.has(m.uid);
             // 옅은 틴트만. 다크 모드에서도 텍스트 가독성 유지.
             const bg = submitted
-              ? "rgba(34, 197, 94, 0.14)"   // green tint
-              : "rgba(239, 68, 68, 0.14)";  // red tint
+              ? "rgba(34, 197, 94, 0.25)"   // green tint
+              : "rgba(239, 68, 68, 0.25)";  // red tint
             return (
               <li key={m.uid}>
                 <button
