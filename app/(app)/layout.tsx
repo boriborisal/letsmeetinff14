@@ -32,7 +32,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <header className="border-b border-border">
         <div className="container flex h-12 items-center justify-between text-sm">
           <Link href="/" className="font-semibold tracking-tight">
-            FFTuning
+            {"Let's Meet in FF14"}
           </Link>
           <div className="flex items-center gap-3">
             {user.photoURL ? (

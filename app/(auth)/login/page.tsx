@@ -3,7 +3,7 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "로그인 · FFTuning",
+  title: "로그인 · Let's Meet in FF14",
 };
 
 export default function LoginPage() {
@@ -11,7 +11,7 @@ export default function LoginPage() {
     <main className="grid min-h-screen place-items-center px-4">
       <div className="w-full max-w-sm space-y-8 text-center">
         <header className="space-y-2">
-          <h1 className="text-2xl font-semibold tracking-tight">FFTuning</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Let&apos;s Meet in FF14</h1>
           <p className="text-sm text-muted-foreground">
             FF14 한섭 레이드 공대 일정 조율
           </p>

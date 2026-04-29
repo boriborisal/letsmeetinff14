@@ -1,6 +1,6 @@
 # UI.md
 
-FFTuning UI 결정사항 모음. 시안 작업하면서 정착된 패턴들. Phase 1 구현 시 이 문서를 단일 진실 원천(single source of truth)으로 사용.
+Let's Meet in FF14 UI 결정사항 모음. 시안 작업하면서 정착된 패턴들. Phase 1 구현 시 이 문서를 단일 진실 원천(single source of truth)으로 사용.
 
 ## 톤
 

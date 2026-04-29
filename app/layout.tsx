@@ -3,7 +3,7 @@ import "./globals.css";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 
 export const metadata: Metadata = {
-  title: "FFTuning",
+  title: "Let's Meet in FF14",
   description: "FF14 레이드 공대 일정 조율 + 출석 운영 도구",
 };
 
