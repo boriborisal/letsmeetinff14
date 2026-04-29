@@ -17,17 +17,17 @@ export const viewport: Viewport = {
 };
 
 // 첫 페인트 전에 .dark 클래스 적용 (FOUC 방지).
-// localStorage 'theme' 값 우선, 없으면 OS prefers-color-scheme.
+// localStorage 'theme' 값 우선, 없으면 다크 기본.
 const themeInitScript = `
 (function () {
   try {
     var t = localStorage.getItem('theme');
-    if (t !== 'light' && t !== 'dark') {
-      t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    }
+    if (t !== 'light' && t !== 'dark') t = 'dark';
     if (t === 'dark') document.documentElement.classList.add('dark');
     else document.documentElement.classList.remove('dark');
-  } catch (e) {}
+  } catch (e) {
+    document.documentElement.classList.add('dark');
+  }
 })();
 `;
 
