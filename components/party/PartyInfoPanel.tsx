@@ -12,6 +12,7 @@ import {
   updateParty,
   updateProgressNote,
 } from "@/lib/firestore/parties";
+import { disbandParty } from "@/lib/firestore/disbandClient";
 import { activeRaidContents, getRaidContent } from "@/lib/raid/contents";
 import { JobIcon } from "@/components/common/JobIcon";
 import { MemberDetailModal } from "./MemberDetailModal";
@@ -214,8 +215,13 @@ export function PartyInfoPanel({
         </ul>
       </section>
 
-      {/* 위험 영역: 탈퇴 (리더 제외) */}
-      <LeavePartySection partyId={party.id} uid={uid} isLeader={isLeader} />
+      {/* 위험 영역: 탈퇴 (멤버) / 해체 (리더) */}
+      <LeavePartySection
+        partyId={party.id}
+        uid={uid}
+        isLeader={isLeader}
+        partyName={party.name}
+      />
 
       {/* 멤버 상세 모달 */}
       <MemberDetailModal
@@ -485,29 +491,23 @@ function ProgressNoteSection({
 }
 
 // ─────────────────────────────────────────────
-// 공대 탈퇴 (리더 제외)
+// 공대 탈퇴 (멤버) / 공대 해체 (리더)
 // ─────────────────────────────────────────────
 
 function LeavePartySection({
   partyId,
   uid,
   isLeader,
+  partyName,
 }: {
   partyId: string;
   uid: string;
   isLeader: boolean;
+  partyName: string;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  if (isLeader) {
-    return (
-      <p className="text-sm text-muted-foreground">
-        공대장은 직접 탈퇴할 수 없습니다.
-      </p>
-    );
-  }
 
   async function onLeave() {
     if (!window.confirm("정말 이 공대를 나가시겠습니까? 다시 가입하려면 초대 코드가 필요합니다.")) return;
@@ -521,6 +521,42 @@ function LeavePartySection({
       setError("탈퇴에 실패했습니다.");
       setBusy(false);
     }
+  }
+
+  async function onDisband() {
+    if (!window.confirm(
+      `정말 "${partyName}" 공대를 해체하시겠습니까?\n\n` +
+      "공대원·가능 시간·확정 일정·출석·진도 메모 모두 영구 삭제됩니다.\n" +
+      "이 동작은 되돌릴 수 없습니다.",
+    )) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await disbandParty({ partyId });
+      router.replace("/");
+    } catch (err) {
+      console.error(err);
+      setError(err instanceof Error ? err.message : "해체에 실패했습니다.");
+      setBusy(false);
+    }
+  }
+
+  if (isLeader) {
+    return (
+      <div className="pt-2">
+        <button
+          type="button"
+          onClick={() => void onDisband()}
+          disabled={busy}
+          className="rounded-md bg-red-500 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-red-600 disabled:opacity-50"
+        >
+          {busy ? "해체 중…" : "공대 해체"}
+        </button>
+        {error ? (
+          <p className="mt-1.5 text-sm text-red-500">{error}</p>
+        ) : null}
+      </div>
+    );
   }
 
   return (
