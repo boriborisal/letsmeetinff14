@@ -1,0 +1,203 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --primary: 240 5.9% 10%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 240 5.9% 10%;
+    --radius: 0.5rem;
+
+    /* UI.md 토큰 — 시간 그리드 등 도메인 화면 전용 */
+    --color-background-primary: hsl(0 0% 100%);
+    --color-background-secondary: hsl(240 4.8% 95.9%);
+    --color-background-success: hsl(142 70% 45% / 0.12);
+    --color-background-info: hsl(217 91% 60%);
+    --color-text-primary: hsl(240 10% 3.9%);
+    --color-text-secondary: hsl(240 3.8% 46.1%);
+    --color-text-tertiary: hsl(240 3% 64%);
+    --color-text-success: hsl(142 70% 36%);
+    --color-text-info: hsl(217 91% 50%);
+    --color-text-danger: hsl(0 72% 51%);
+
+    /* heatmap 베이스 색 (HSL 컴포넌트만 — alpha 변주 위함) */
+    --heat-base: 142 90% 50%;
+  }
+
+  .dark {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 240 5.9% 10%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 240 4.9% 83.9%;
+
+    --color-background-primary: hsl(240 10% 3.9%);
+    --color-background-secondary: hsl(240 3.7% 15.9%);
+    --color-background-success: hsl(142 70% 45% / 0.18);
+    --color-background-info: hsl(217 91% 60%);
+    --color-text-primary: hsl(0 0% 98%);
+    --color-text-secondary: hsl(240 5% 64.9%);
+    --color-text-tertiary: hsl(240 4% 50%);
+    --color-text-success: hsl(142 70% 55%);
+    --color-text-info: hsl(217 91% 65%);
+    --color-text-danger: hsl(0 72% 60%);
+
+    /* heatmap: 다크 모드에선 더 밝은 채도 높은 그린 — 투명도 변주 시 가독성 확보 */
+    --heat-base: 142 95% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* 페이지 세로 스크롤바 숨김 (스크롤은 동작) */
+  html {
+    scrollbar-width: none;       /* Firefox */
+    -ms-overflow-style: none;    /* IE/Edge legacy */
+  }
+  html::-webkit-scrollbar {
+    display: none;               /* WebKit */
+  }
+}
+
+/* 임의 컨테이너에서 스크롤바만 숨기기 (스크롤은 동작) */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* ─────────────────────────────────────────────
+   가능 시간 그리드 (UI.md 명세 그대로)
+   ───────────────────────────────────────────── */
+
+.av-grid {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  width: 100%;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.av-axis {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding-top: 36px; /* 컬럼 헤더 높이 보정 */
+}
+.av-axis-label {
+  font-size: 10px;
+  color: var(--color-text-tertiary);
+  line-height: 18px;
+  padding-right: 6px;
+}
+.av-cols {
+  display: flex;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+.av-col {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+.av-head {
+  height: 36px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  line-height: 1.2;
+}
+.av-head .we { color: var(--color-text-danger); }
+.av-head .dow {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--color-text-secondary);
+}
+.av-head .we .dow,
+.av-head .we { color: var(--color-text-danger); }
+
+.av-slots {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.av-reel {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 1px;
+  border-radius: 3px;
+  border: 1.5px solid transparent;
+}
+.av-reel.ready {
+  border-color: var(--color-text-info);
+}
+
+.s {
+  height: 18px;
+  border-radius: 2px;
+  background: var(--color-background-secondary);
+  cursor: pointer;
+  transition: background 80ms;
+}
+.s:hover {
+  filter: brightness(1.15);
+}
+.s.readonly { cursor: default; }
+.s.readonly:hover { filter: none; }
+
+/* 본인 응답 (INPUT 모드) */
+.s.on { background: var(--color-background-info); }
+
+/* 응답 농도 — 한 가지 그린의 alpha만 변주 (.h1=가장 옅음, .h8=가장 진함).
+   color-mix 대신 hsl(... / alpha) 형태로 명시 → 다크 배경에서 "투명도가 늘어나는" 느낌이 명확. */
+.s.h1 { background: hsl(var(--heat-base) / 0.18); }
+.s.h2 { background: hsl(var(--heat-base) / 0.30); }
+.s.h3 { background: hsl(var(--heat-base) / 0.42); }
+.s.h4 { background: hsl(var(--heat-base) / 0.55); }
+.s.h5 { background: hsl(var(--heat-base) / 0.68); }
+.s.h6 { background: hsl(var(--heat-base) / 0.80); }
+.s.h7 { background: hsl(var(--heat-base) / 0.92); }
+.s.h8 { background: hsl(var(--heat-base) / 1.00); }

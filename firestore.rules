@@ -1,0 +1,96 @@
+// Firestore 보안 규칙 초안 — Phase 0.
+// 모든 새 컬렉션은 여기서 명시 후 배포. (CLAUDE.md 보안 원칙)
+// 권한 체크 키는 항상 (userId, partyId) 쌍 — 멤버는 여러 공대 동시 소속 가능.
+//
+// 컬렉션 구조 (복수형 영문):
+//   users/{uid}
+//   parties/{partyId}
+//   parties/{partyId}/members/{uid}
+//   parties/{partyId}/availabilities/{uid}_{weekStart}
+//   parties/{partyId}/schedules/{scheduleId}
+//   parties/{partyId}/schedules/{scheduleId}/attendances/{uid}
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── helpers ───
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isSelf(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+    function memberDoc(partyId) {
+      return get(/databases/$(database)/documents/parties/$(partyId)/members/$(request.auth.uid));
+    }
+    function isPartyMember(partyId) {
+      return isSignedIn() && exists(/databases/$(database)/documents/parties/$(partyId)/members/$(request.auth.uid));
+    }
+    function isPartyLeader(partyId) {
+      return isPartyMember(partyId) && memberDoc(partyId).data.role == 'leader';
+    }
+
+    // ─── users ───
+    match /users/{uid} {
+      allow read: if isSignedIn();          // 닉네임/아바타는 같은 공대 안에서 표시 필요
+      allow create, update: if isSelf(uid);
+      allow delete: if false;               // 탈퇴는 서버 액션으로만
+    }
+
+    // ─── parties ───
+    match /parties/{partyId} {
+      allow read: if isPartyMember(partyId);
+      allow create: if isSignedIn()
+        && request.resource.data.leaderUid == request.auth.uid;
+      allow update: if isPartyLeader(partyId);
+      // 일반 멤버는 progressNote 한 필드만 수정 가능 (협업 메모)
+      allow update: if isPartyMember(partyId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['progressNote']);
+      allow delete: if isPartyLeader(partyId);
+
+      // ─── members ───
+      match /members/{uid} {
+        allow read: if isPartyMember(partyId);
+
+        // 멤버 신규 생성 = 두 가지 경우만 허용:
+        //   (a) 공대 생성과 동시에 leader가 자기 자신을 등록 (writeBatch 안에서)
+        //       → 같은 batch에서 parties/{partyId} 문서가 생성되며 leaderUid가 자기 자신.
+        //   (b) 그 외 모든 가입(초대코드)은 Admin SDK로 서버에서 처리. 클라이언트 직접 쓰기 X.
+        allow create: if isSelf(uid)
+          && getAfter(/databases/$(database)/documents/parties/$(partyId)).data.leaderUid == request.auth.uid;
+
+        // 셀프 업데이트는 권한 변경 금지
+        allow update: if isSelf(uid)
+          && (request.resource.data.role == resource.data.role);
+        // 리더는 역할 변경 등 가능
+        allow update: if isPartyLeader(partyId);
+
+        allow delete: if isSelf(uid) || isPartyLeader(partyId);
+      }
+
+      // ─── availabilities ───
+      // doc id = "{uid}_{weekStart}" — uid 추출 후 본인만 쓰기 가능
+      match /availabilities/{availId} {
+        allow read: if isPartyMember(partyId);
+        allow create, update: if isPartyMember(partyId)
+          && request.resource.data.uid == request.auth.uid;
+        allow delete: if isSelf(resource.data.uid);
+      }
+
+      // ─── schedules ───
+      match /schedules/{scheduleId} {
+        allow read: if isPartyMember(partyId);
+        allow create, update, delete: if isPartyLeader(partyId);
+
+        // ─── attendances ───
+        match /attendances/{uid} {
+          allow read: if isPartyMember(partyId);
+          allow create, update: if isSelf(uid);
+          allow delete: if false;
+        }
+      }
+    }
+  }
+}
