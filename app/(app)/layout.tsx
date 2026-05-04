@@ -7,10 +7,11 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { UserMenu } from "@/components/auth/UserMenu";
 import { ThemeToggle } from "@/components/common/ThemeToggle";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { user, loading, logout } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -36,24 +37,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <Link href="/" className="font-semibold tracking-tight">
             {"Let's Meet in FF14"}
           </Link>
-          <div className="flex items-center gap-3">
-            {user.photoURL ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={user.photoURL}
-                alt=""
-                className="h-6 w-6 rounded-full"
-                referrerPolicy="no-referrer"
-              />
-            ) : null}
-            <span className="text-foreground">{user.displayName ?? "사용자"}</span>
-            <button
-              type="button"
-              onClick={() => void logout()}
-              className="text-sm text-muted-foreground transition hover:text-foreground"
-            >
-              로그아웃
-            </button>
+          <div className="flex items-center gap-2">
+            <UserMenu />
             <ThemeToggle />
           </div>
         </div>

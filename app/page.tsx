@@ -10,7 +10,7 @@ export default function HomePage() {
 
       <HomeAuthCard />
 
-      <p className="text-xs text-muted-foreground">오류 및 개선사항 접수: </p>
+      <p className="text-xs text-muted-foreground">오류 및 개선사항 접수: 비누솝@톤베리</p>
     </main>
   );
 }

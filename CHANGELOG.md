@@ -21,11 +21,23 @@ Let's Meet in FF14의 주목할 만한 변경사항.
 - **첫 프로필 설정 강제**: 가입/공대 생성 시 placeholder(Moogle/WAR/MT) 그대로 저장되던 문제 → `Member.profileSetup` 플래그 도입. 첫 진입 시 서버·메인 잡·메인 자리는 빈 상태로 시작, 사용자가 의식적으로 선택 후에만 저장 가능. 필수 필드엔 빨강 `*` 표시.
 - **프로필 미설정 표시**: profileSetup=false인 공대원은 멤버 목록·내 프로필·상세 모달에서 "프로필 미설정"으로 노출 (placeholder인 모그리/전사/MT를 잘못 노출하지 않게).
 - **자리 매칭 정확도**: profileSetup=false 멤버는 매칭에서 제외 (placeholder MT 등이 결과를 왜곡하지 않게). 추천 카드 위에 "프로필 미설정 N명 제외됨" 노란 안내 표시.
+- **계정 삭제 (PIPA 회원탈퇴권)**: 헤더 우상단 디스코드 프로필 클릭 → 드롭다운 메뉴에 [로그아웃] / [계정 삭제]. 삭제 시 모든 공대 자동 정리 (리더면 공대 해체, 멤버면 self-kick) + Firestore users 삭제 + Firebase Auth user 삭제. `/api/account/delete`.
 
 ### 변경
 - **편집 중 셀 툴팁 완전 비활성**: 모바일에서 hover가 입력에 끌려가 거슬려 시간 표시도 숨김. 잠금 상태(제출 후)에선 그대로 명단 노출.
 - **input/textarea 내부 스크롤바·resize 핸들 숨김**: 입력 시 스크롤바가 살짝 노출되던 케이스 차단. body 스크롤바도 함께 숨김 처리.
 - **공대원 모달 스크롤바 숨김**: 모달 내부가 길어 세로 스크롤이 생길 때 바를 보이지 않게 (no-scrollbar 클래스).
+- **헤더 사용자 영역**: 단순 닉네임 + 로그아웃 텍스트 → 드롭다운 메뉴(UserMenu)로 통합. 로그아웃·계정 삭제가 이 메뉴 안에.
+
+### 보안
+- **fflogsUrl URL 형식 검증**: 클라이언트 폼에서 `^https?://` 강제 + Firestore 룰로도 동시 검증. 렌더링 시 `safeHttpUrl` 헬퍼로 한 번 더 (XSS 방어).
+- **users/{uid} 읽기 권한 강화**: 누구나 read → 본인만 read. 다른 사용자 정보(닉네임·아바타)는 멤버 doc(charName 등)으로 충분.
+- **공대 생성 수 제한**: Firestore 룰에서 한 사용자 최대 10개 공대까지만 생성 가능 (`partyIds.size() < 10`). 스팸/저장소 폭증 방어.
+- **시간 라벨 가독성**: 시간 그리드 좌측 시간 라벨 폰트 키움(10→15) + 색 한 단계 진하게.
+
+### 인프라
+- **`.gitattributes` 추가**: `* text=auto eol=lf` — Windows 작업 시 매 commit CRLF 경고 차단.
+- **`npm audit` 검토**: 프로덕션 의존성 중 high 2건 (Next 14.2 image optimizer DoS / undici random) 확인 — 호스팅 환경(Vercel)·코드 사용 패턴상 영향 적음. dev deps의 firebase-tools 관련 22건은 빌드 환경 한정.
 
 ---
 

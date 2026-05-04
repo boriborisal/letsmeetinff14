@@ -16,6 +16,7 @@ import { disbandParty } from "@/lib/firestore/disbandClient";
 import { activeRaidContents, getRaidContent } from "@/lib/raid/contents";
 import { JobIcon } from "@/components/common/JobIcon";
 import { MemberDetailModal } from "./MemberDetailModal";
+import { safeHttpUrl } from "@/lib/utils/url";
 import {
   JOB_KOR,
   REEL_MIN_BY_TIER,
@@ -155,21 +156,24 @@ export function PartyInfoPanel({
               label="체인지"
               value={myMember.changeSlots.length ? myMember.changeSlots.join(", ") : "없음"}
             />
-            {myMember.fflogsUrl ? (
-              <Row
-                label="FFLogs"
-                value={
-                  <a
-                    href={myMember.fflogsUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="underline underline-offset-2 hover:text-foreground"
-                  >
-                    링크
-                  </a>
-                }
-              />
-            ) : null}
+            {(() => {
+              const url = safeHttpUrl(myMember.fflogsUrl);
+              return url ? (
+                <Row
+                  label="FFLogs"
+                  value={
+                    <a
+                      href={url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="underline underline-offset-2 hover:text-foreground"
+                    >
+                      링크
+                    </a>
+                  }
+                />
+              ) : null;
+            })()}
           </dl>
         )}
       </section>

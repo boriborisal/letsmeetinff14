@@ -112,6 +112,12 @@ export default function ProfilePage({ params }: { params: { id: string } }) {
     if (!mainJob) return setSaveError("메인 잡을 선택해주세요.");
     if (!mainSlot) return setSaveError("메인 자리를 선택해주세요.");
 
+    // FFLogs URL 형식 검증 (XSS/오용 방지) — 비어있으면 통과
+    const trimmedUrl = fflogsUrl.trim();
+    if (trimmedUrl && !/^https?:\/\/.+/i.test(trimmedUrl)) {
+      return setSaveError("프프로그 URL은 http:// 또는 https:// 로 시작해야 합니다.");
+    }
+
     // 메인 잡은 가능 잡 목록에서 제외 (중복 방지)
     const finalSubJobs = Array.from(subJobs).filter((j) => j !== mainJob);
     // 메인 자리는 체인지 가능 자리에서 제외

@@ -31,19 +31,34 @@ service cloud.firestore {
     function isPartyLeader(partyId) {
       return isPartyMember(partyId) && memberDoc(partyId).data.role == 'leader';
     }
+    // fflogsUrl이 있다면 http(s) 형식이어야 함 (XSS 방어)
+    function fflogsUrlOk(data) {
+      return !('fflogsUrl' in data)
+        || data.fflogsUrl == null
+        || (data.fflogsUrl is string && data.fflogsUrl.matches('^https?://.+'));
+    }
 
     // ─── users ───
     match /users/{uid} {
-      allow read: if isSignedIn();          // 닉네임/아바타는 같은 공대 안에서 표시 필요
+      // 본인만 read. 다른 사용자 정보(Discord 닉/아바타)는 멤버 doc(charName 등)로
+      // 충분 — users 자체는 partyIds·discordId 같은 메타라 노출 최소화.
+      allow read: if isSelf(uid);
       allow create, update: if isSelf(uid);
-      allow delete: if false;               // 탈퇴는 서버 액션으로만
+      allow delete: if false;               // 탈퇴는 서버 액션 (Admin SDK)으로만
     }
 
     // ─── parties ───
     match /parties/{partyId} {
       allow read: if isPartyMember(partyId);
+      // 한 사용자가 들고 있을 수 있는 공대 수 한도 = 10. 스팸/저장소 폭증 방어.
+      // 사용자 doc에 partyIds 필드가 없으면 기본 [] 처리.
       allow create: if isSignedIn()
-        && request.resource.data.leaderUid == request.auth.uid;
+        && request.resource.data.leaderUid == request.auth.uid
+        && (
+          !exists(/databases/$(database)/documents/users/$(request.auth.uid)) ||
+          !('partyIds' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data) ||
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.partyIds.size() < 10
+        );
       allow update: if isPartyLeader(partyId);
       // 일반 멤버는 progressNote 한 필드만 수정 가능 (협업 메모)
       allow update: if isPartyMember(partyId)
@@ -61,11 +76,13 @@ service cloud.firestore {
         allow create: if isSelf(uid)
           && getAfter(/databases/$(database)/documents/parties/$(partyId)).data.leaderUid == request.auth.uid;
 
-        // 셀프 업데이트는 권한 변경 금지
+        // 셀프 업데이트는 권한 변경 금지 + fflogsUrl 형식 검증
         allow update: if isSelf(uid)
-          && (request.resource.data.role == resource.data.role);
-        // 리더는 역할 변경 등 가능
-        allow update: if isPartyLeader(partyId);
+          && request.resource.data.role == resource.data.role
+          && fflogsUrlOk(request.resource.data);
+        // 리더는 역할 변경 등 가능 (단, fflogsUrl은 마찬가지로 형식 검증)
+        allow update: if isPartyLeader(partyId)
+          && fflogsUrlOk(request.resource.data);
 
         allow delete: if isSelf(uid) || isPartyLeader(partyId);
       }

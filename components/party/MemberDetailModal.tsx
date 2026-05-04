@@ -8,6 +8,7 @@ import { Modal } from "@/components/common/Modal";
 import { JobIcon } from "@/components/common/JobIcon";
 import { AvailabilityGrid } from "@/components/availability/AvailabilityGrid";
 import { kickMember } from "@/lib/firestore/kickClient";
+import { safeHttpUrl } from "@/lib/utils/url";
 import {
   JOB_KOR,
   ROLE_KOR,
@@ -151,18 +152,21 @@ export function MemberDetailModal({
               ? member.changeSlots.join(", ")
               : <span className="text-muted-foreground">없음</span>}
           </ProfileRow>
-          {member.fflogsUrl ? (
-            <ProfileRow label="FFLogs">
-              <a
-                href={member.fflogsUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="underline underline-offset-2 hover:text-foreground"
-              >
-                {member.fflogsUrl}
-              </a>
-            </ProfileRow>
-          ) : null}
+          {(() => {
+            const url = safeHttpUrl(member.fflogsUrl);
+            return url ? (
+              <ProfileRow label="FFLogs">
+                <a
+                  href={url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="underline underline-offset-2 hover:text-foreground"
+                >
+                  {url}
+                </a>
+              </ProfileRow>
+            ) : null;
+          })()}
           {member.bio ? (
             <ProfileRow label="소개">
               <span className="whitespace-pre-wrap">{member.bio}</span>
