@@ -8,6 +8,7 @@ import { Modal } from "@/components/common/Modal";
 import { JobIcon } from "@/components/common/JobIcon";
 import { AvailabilityGrid } from "@/components/availability/AvailabilityGrid";
 import { kickMember } from "@/lib/firestore/kickClient";
+import { transferLeadership } from "@/lib/firestore/transferClient";
 import { safeHttpUrl } from "@/lib/utils/url";
 import {
   JOB_KOR,
@@ -52,8 +53,17 @@ export function MemberDetailModal({
 }: Props) {
   const [kicking, setKicking] = useState(false);
   const [kickError, setKickError] = useState<string | null>(null);
+  const [transferring, setTransferring] = useState(false);
+  const [transferError, setTransferError] = useState<string | null>(null);
 
   const canKick = !!member && viewerIsLeader && member.uid !== viewerUid && member.role !== "leader";
+  // 양도는 프로필 설정 완료된 멤버에게만 (placeholder 멤버에게 권한 넘기면 곤란)
+  const canTransfer =
+    !!member &&
+    viewerIsLeader &&
+    member.uid !== viewerUid &&
+    member.role !== "leader" &&
+    member.profileSetup !== false;
 
   async function onKick() {
     if (!member) return;
@@ -70,6 +80,24 @@ export function MemberDetailModal({
       setKickError(err instanceof Error ? err.message : "강퇴 실패");
     } finally {
       setKicking(false);
+    }
+  }
+
+  async function onTransfer() {
+    if (!member) return;
+    if (!window.confirm(
+      `${member.charName}님에게 공대장을 양도하시겠어요?\n\n` +
+      "본인은 일반 공대원이 되고, 이후 공대 해체·강퇴·일정 확정 등은 새 공대장이 담당합니다.",
+    )) return;
+    setTransferring(true);
+    setTransferError(null);
+    try {
+      await transferLeadership({ partyId, uid: member.uid });
+      onClose();
+    } catch (err) {
+      setTransferError(err instanceof Error ? err.message : "양도 실패");
+    } finally {
+      setTransferring(false);
     }
   }
   const tier = raid?.tier ?? "ultimate";
@@ -195,22 +223,39 @@ export function MemberDetailModal({
           </div>
         </section>
 
-        {/* 위험 영역: 강퇴 (리더 + 본인 외 + 일반 멤버 한정) */}
-        {canKick ? (
-          <section className="flex items-center justify-end border-t border-border pt-4">
-            <div className="flex flex-col items-end gap-1.5">
-              <button
-                type="button"
-                onClick={() => void onKick()}
-                disabled={kicking}
-                className="shrink-0 rounded-md bg-red-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-600 disabled:opacity-50"
-              >
-                {kicking ? "강퇴 중…" : "강퇴"}
-              </button>
-              {kickError ? (
-                <p className="text-xs text-red-500">{kickError}</p>
-              ) : null}
-            </div>
+        {/* 리더 액션: 양도 / 강퇴 */}
+        {canKick || canTransfer ? (
+          <section className="flex flex-wrap items-center justify-end gap-2 border-t border-border pt-4">
+            {canTransfer ? (
+              <div className="flex flex-col items-end gap-1">
+                <button
+                  type="button"
+                  onClick={() => void onTransfer()}
+                  disabled={transferring || kicking}
+                  className="rounded-md border border-border bg-secondary px-4 py-2 text-sm font-medium transition hover:bg-accent disabled:opacity-50"
+                >
+                  {transferring ? "양도 중…" : "공대장 양도"}
+                </button>
+                {transferError ? (
+                  <p className="text-xs text-destructive">{transferError}</p>
+                ) : null}
+              </div>
+            ) : null}
+            {canKick ? (
+              <div className="flex flex-col items-end gap-1">
+                <button
+                  type="button"
+                  onClick={() => void onKick()}
+                  disabled={kicking || transferring}
+                  className="shrink-0 rounded-md bg-red-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-600 disabled:opacity-50"
+                >
+                  {kicking ? "강퇴 중…" : "강퇴"}
+                </button>
+                {kickError ? (
+                  <p className="text-xs text-red-500">{kickError}</p>
+                ) : null}
+              </div>
+            ) : null}
           </section>
         ) : null}
       </div>

@@ -233,7 +233,7 @@ export const ROLE_KOR: Record<Role, string> = {
   healer: "힐러",
   melee: "근접딜",
   ranged: "원거리물리딜",
-  caster: "마법딜",
+  caster: "캐스터",
 };
 
 export const JOB_KOR: Record<Job, string> = {

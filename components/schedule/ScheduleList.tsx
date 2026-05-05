@@ -221,6 +221,26 @@ function ScheduleRow({
   }
 
   const isCancelled = !!schedule.cancelled;
+  const [expanded, setExpanded] = useState(false);
+
+  // status별 멤버 그룹핑
+  const memberByUid = useMemo(
+    () => new Map(members.map((m) => [m.uid, m])),
+    [members],
+  );
+  const grouped = useMemo(() => {
+    const going: Attendance[] = [];
+    const absent: Attendance[] = [];
+    const tentative: Attendance[] = [];
+    for (const a of attendances) {
+      if (a.status === "going") going.push(a);
+      else if (a.status === "absent") absent.push(a);
+      else tentative.push(a);
+    }
+    const respondedUids = new Set(attendances.map((a) => a.uid));
+    const noRespondMembers = members.filter((m) => !respondedUids.has(m.uid));
+    return { going, absent, tentative, noRespondMembers };
+  }, [attendances, members]);
 
   return (
     <div
@@ -241,9 +261,14 @@ function ScheduleRow({
               </span>
             ) : null}
           </p>
-          <p className="text-sm text-muted-foreground">
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className="text-left text-sm text-muted-foreground transition hover:text-foreground"
+          >
             출 {counts.going} · 결 {counts.absent} · 미정 {counts.tentative} · 무응답 {noResponse}
-          </p>
+            <span className="ml-1.5 text-xs">{expanded ? "▾" : "▸"}</span>
+          </button>
         </div>
 
         {isLeader ? (
@@ -257,6 +282,49 @@ function ScheduleRow({
           </button>
         ) : null}
       </div>
+
+      {expanded ? (
+        <div className="mt-2 space-y-1.5 rounded-md bg-secondary/40 px-3 py-2 text-sm">
+          <DetailRow label="출석" count={grouped.going.length}>
+            {grouped.going.length > 0
+              ? grouped.going
+                  .map((a) => memberByUid.get(a.uid)?.charName ?? a.uid)
+                  .join(", ")
+              : "—"}
+          </DetailRow>
+          <DetailRow label="결석" count={grouped.absent.length}>
+            {grouped.absent.length > 0 ? (
+              <ul className="space-y-0.5">
+                {grouped.absent.map((a) => {
+                  const name = memberByUid.get(a.uid)?.charName ?? a.uid;
+                  return (
+                    <li key={a.uid}>
+                      {name}
+                      {a.reason ? (
+                        <span className="text-muted-foreground"> — {a.reason}</span>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              "—"
+            )}
+          </DetailRow>
+          <DetailRow label="미정" count={grouped.tentative.length}>
+            {grouped.tentative.length > 0
+              ? grouped.tentative
+                  .map((a) => memberByUid.get(a.uid)?.charName ?? a.uid)
+                  .join(", ")
+              : "—"}
+          </DetailRow>
+          <DetailRow label="무응답" count={grouped.noRespondMembers.length}>
+            {grouped.noRespondMembers.length > 0
+              ? grouped.noRespondMembers.map((m) => m.charName).join(", ")
+              : "—"}
+          </DetailRow>
+        </div>
+      ) : null}
 
       {!isCancelled ? (
         <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -295,6 +363,26 @@ function ScheduleRow({
       {error ? (
         <p className="mt-1 text-sm text-destructive">{error}</p>
       ) : null}
+    </div>
+  );
+}
+
+function DetailRow({
+  label,
+  count,
+  children,
+}: {
+  label: string;
+  count: number;
+  children: React.ReactNode;
+}) {
+  if (count === 0) return null;
+  return (
+    <div className="flex flex-wrap items-baseline gap-1.5">
+      <span className="shrink-0 text-xs text-muted-foreground/80">
+        {label} ({count})
+      </span>
+      <span className="min-w-0 flex-1 text-foreground">{children}</span>
     </div>
   );
 }

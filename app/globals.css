@@ -196,6 +196,7 @@
   background: var(--color-background-secondary);
   cursor: pointer;
   transition: background 80ms;
+  touch-action: none;            /* 모바일 드래그 페인팅 시 스크롤 방지 */
 }
 .s:hover {
   filter: brightness(1.15);
@@ -239,3 +240,39 @@
 .s.h6 { background: hsl(var(--heat-base) / 0.80); }
 .s.h7 { background: hsl(var(--heat-base) / 0.92); }
 .s.h8 { background: hsl(var(--heat-base) / 1.00); }
+
+/* ─────────────────────────────────────────────
+   모바일 (≤ 640px) 조정 — UI.md 명세
+   ───────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .av-grid {
+    gap: 4px;                    /* 6 → 4px */
+  }
+  .av-axis {
+    padding-top: 32px;           /* 헤더 높이 보정 */
+  }
+  .av-axis-label {
+    font-size: 12px;             /* 15 → 12px */
+    padding-right: 4px;
+  }
+  .av-cols {
+    gap: 2px;                    /* 3 → 2px */
+  }
+  .av-head {
+    height: 32px;
+    font-size: 11px;
+  }
+  .av-head .dow {
+    font-size: 10px;
+  }
+  .av-slots {
+    gap: 3px;                    /* 4 → 3px */
+  }
+  .s {
+    height: 16px;                /* 18 → 16px */
+  }
+  /* 모바일에선 hover 툴팁이 아예 무의미 — touch-only 환경 가정 */
+  .s[data-tooltip]:hover::after {
+    display: none;
+  }
+}

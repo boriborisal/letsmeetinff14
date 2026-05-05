@@ -22,7 +22,7 @@ export const RAID_CONTENTS: readonly RaidContent[] = [
   // ──────────────────────────────────────────────
   { id: "ucob", nameKor: "절 바하무트 토벌전",     shortKor: "절바하",   tier: "ultimate", patch: "4.11", partySize: 8, releasedAtKor: "2018-04-17", active: true },
   { id: "uwu",  nameKor: "절 알테마 웨폰 파괴작전", shortKor: "절테마",   tier: "ultimate", patch: "4.31", partySize: 8, releasedAtKor: "2018-11-20", active: true },
-  { id: "tea",  nameKor: "절 알렉산더 토벌전",     shortKor: "절렉",     tier: "ultimate", patch: "5.11", partySize: 8, releasedAtKor: "2020-04-14", active: true },
+  { id: "tea",  nameKor: "절 알렉산더 토벌전",     shortKor: "절렉산더",     tier: "ultimate", patch: "5.11", partySize: 8, releasedAtKor: "2020-04-14", active: true },
   { id: "dsr",  nameKor: "절 용시전쟁",           shortKor: "절용시",   tier: "ultimate", patch: "6.11", partySize: 8, releasedAtKor: "2022-10-25", active: true },
   { id: "top",  nameKor: "절 오메가 검증전",       shortKor: "절메가",   tier: "ultimate", patch: "6.31", partySize: 8, releasedAtKor: "2023-07-18", active: true },
   { id: "fru",  nameKor: "절 또 하나의 미래",       shortKor: "절에덴",   tier: "ultimate", patch: "7.11", partySize: 8, releasedAtKor: "2025-04-15", active: true },
