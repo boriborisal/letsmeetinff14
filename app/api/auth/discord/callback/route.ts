@@ -129,7 +129,17 @@ function renderCompleteHtml(customToken: string, nextPath: string): string {
       const app = getApps()[0] ?? initializeApp(config);
       const auth = getAuth(app);
       try {
-        await signInWithCustomToken(auth, token);
+        const cred = await signInWithCustomToken(auth, token);
+        // 세션 쿠키 발급 — 클라 저장소(IndexedDB)가 휘발돼도 로그인 복구 가능하게.
+        // 실패해도 로그인 자체는 계속 진행 (쿠키는 부가 안전장치).
+        try {
+          const idToken = await cred.user.getIdToken();
+          await fetch("/api/auth/session", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ idToken }),
+          });
+        } catch (_) { /* noop */ }
         window.location.replace(next);
       } catch (e) {
         document.querySelector(".box").innerHTML =

@@ -1,4 +1,9 @@
 // 로그인 페이지. Discord OAuth 시작 링크 1개.
+// 인앱 브라우저(디스코드 등)에서 열렸으면 외부 브라우저 유도 안내를 함께 표시.
+
+import { headers } from "next/headers";
+import { detectInAppBrowser } from "@/lib/auth/userAgent";
+import { InAppBrowserNotice } from "@/components/auth/InAppBrowserNotice";
 
 export const metadata = {
   title: "로그인 · Let's Meet in FF14",
@@ -18,6 +23,9 @@ export default function LoginPage({
     ? `/api/auth/discord/login?next=${encodeURIComponent(next)}`
     : "/api/auth/discord/login";
 
+  // UA로 인앱 브라우저 판별 (서버 렌더 시점).
+  const { isInApp, appName } = detectInAppBrowser(headers().get("user-agent"));
+
   return (
     <main className="grid min-h-screen place-items-center px-4">
       <div className="w-full max-w-sm space-y-8 text-center">
@@ -27,6 +35,8 @@ export default function LoginPage({
             FF14 한섭 레이드 공대 일정 조율
           </p>
         </header>
+
+        {isInApp ? <InAppBrowserNotice appName={appName} /> : null}
 
         <a
           href={loginHref}
