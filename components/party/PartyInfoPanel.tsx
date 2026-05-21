@@ -20,6 +20,7 @@ import { ScheduleModeFields } from "./ScheduleModeFields";
 import { MemberDetailModal } from "./MemberDetailModal";
 import { safeHttpUrl } from "@/lib/utils/url";
 import {
+  ALL_SLOTS,
   JOB_KOR,
   REEL_MIN_BY_TIER,
   SERVER_KOR,
@@ -63,15 +64,37 @@ export function PartyInfoPanel({
       ? `매일 ${party.fixedStart}~${party.fixedEnd}`
       : `세션 ${reels}릴 (${formatMin(reelMin * reels)})`;
 
+  // 공대원 목록은 자리 순서(MT>ST>MH>SH>D1~D4)로 정렬. 프로필 미설정 멤버는 뒤로.
+  const sortedMembers = useMemo(() => {
+    const rank = (m: Member) =>
+      m.profileSetup === false ? 99 : ALL_SLOTS.indexOf(m.mainSlot);
+    return [...members].sort((a, b) => rank(a) - rank(b));
+  }, [members]);
+
   return (
     <aside className="space-y-5">
       {/* 헤더 */}
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 space-y-1">
-          <h1 className="truncate text-xl font-semibold tracking-tight">{party.name}</h1>
+          <h1 className="break-words text-xl font-semibold tracking-tight">{party.name}</h1>
           <p className="text-base text-muted-foreground">
             {raid?.nameKor ?? party.raidContentId}
-            <span className="text-muted-foreground/70"> · {sessionLabel}</span>
+            {/* dayOnly 고정 시간은 가시성 위해 빨간 글자로 강조 */}
+            <span
+              className={
+                party.scheduleMode === "dayOnly"
+                  ? "font-medium"
+                  : "text-muted-foreground/70"
+              }
+              style={
+                party.scheduleMode === "dayOnly"
+                  ? { color: "var(--color-text-danger)" }
+                  : undefined
+              }
+            >
+              {" · "}
+              {sessionLabel}
+            </span>
           </p>
         </div>
         {isLeader && !editing ? (
@@ -191,7 +214,7 @@ export function PartyInfoPanel({
           공대원 ({members.length} / 8) — {submittedUids.size}/{members.length} 응답
         </h2>
         <ul className="divide-y divide-border overflow-hidden rounded-md border border-border bg-card">
-          {members.map((m) => {
+          {sortedMembers.map((m) => {
             const submitted = submittedUids.has(m.uid);
             const profileSet = m.profileSetup !== false;
             const bg = submitted
@@ -615,7 +638,7 @@ function LeavePartySection({
           type="button"
           onClick={() => void onDisband()}
           disabled={busy}
-          className="rounded-md bg-red-500 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-red-600 disabled:opacity-50"
+          className="rounded-md border border-red-500/60 px-3 py-1.5 text-sm font-medium text-red-500 transition hover:bg-red-500/10 disabled:opacity-50"
         >
           {busy ? "해체 중…" : "공대 해체"}
         </button>
