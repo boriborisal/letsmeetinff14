@@ -3,7 +3,7 @@
 // 좌측 공대 정보 패널: 이름·레이드(편집)·초대코드·내 프로필·공대원 목록.
 // 부모로부터 party + members + myMember 받음. 편집 후 onPartyUpdated로 부모에 알림.
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -505,6 +505,15 @@ function ProgressNoteSection({
   const [text, setText] = useState(party.progressNote ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const taRef = useRef<HTMLTextAreaElement>(null);
+
+  // 입력 텍스트 길이에 맞춰 textarea 높이 자동 확장.
+  useEffect(() => {
+    const el = taRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [text, editing]);
 
   async function save() {
     setSaving(true);
@@ -546,11 +555,12 @@ function ProgressNoteSection({
       {editing ? (
         <div className="space-y-2">
           <textarea
+            ref={taRef}
             value={text}
             onChange={(e) => setText(e.target.value)}
             maxLength={200}
             rows={3}
-            className="w-full resize-none rounded-md border border-border bg-background px-2.5 py-1.5 text-base outline-none focus:border-foreground"
+            className="w-full resize-none overflow-hidden rounded-md border border-border bg-background px-2.5 py-1.5 text-base outline-none focus:border-foreground"
           />
           {error ? (
             <p className="text-[15px] text-destructive">{error}</p>
