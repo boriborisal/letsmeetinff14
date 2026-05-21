@@ -61,7 +61,7 @@ export function PartyInfoPanel({
   // dayOnly면 고정 시간, 아니면 세션 1릴 길이.
   const sessionLabel =
     party.scheduleMode === "dayOnly" && party.fixedStart && party.fixedEnd
-      ? `매일 ${party.fixedStart}~${party.fixedEnd}`
+      ? `${party.fixedStart}~${party.fixedEnd}`
       : `세션 ${reels}릴 (${formatMin(reelMin * reels)})`;
 
   // 공대원 목록은 자리 순서(MT>ST>MH>SH>D1~D4)로 정렬. 프로필 미설정 멤버는 뒤로.
