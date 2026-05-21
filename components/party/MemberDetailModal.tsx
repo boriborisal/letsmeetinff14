@@ -148,7 +148,7 @@ export function MemberDetailModal({
             <h2 className="text-xl font-semibold tracking-tight">
               {member.charName}
               {member.role === "leader" ? (
-                <span className="ml-2 rounded bg-secondary px-1.5 py-0.5 text-sm text-muted-foreground">
+                <span className="ml-2 rounded bg-amber-400 px-1.5 py-0.5 text-sm font-bold text-black">
                   공대장
                 </span>
               ) : null}

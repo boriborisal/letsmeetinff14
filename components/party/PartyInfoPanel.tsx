@@ -232,7 +232,7 @@ export function PartyInfoPanel({
                     <p className="truncate">
                       {m.charName}
                       {m.role === "leader" ? (
-                        <span className="ml-1.5 rounded bg-secondary px-1 py-px text-[15px] text-muted-foreground">
+                        <span className="ml-1.5 rounded bg-amber-400 px-1 py-px text-[15px] font-bold text-black">
                           장
                         </span>
                       ) : null}
