@@ -7,6 +7,8 @@ import { useMemo, useState } from "react";
 import { Modal } from "@/components/common/Modal";
 import { JobIcon } from "@/components/common/JobIcon";
 import { AvailabilityGrid } from "@/components/availability/AvailabilityGrid";
+import { DayOnlyGrid, type DayOnlyDayInfo } from "@/components/availability/DayOnlyGrid";
+import { buildDayWindow, fixedWindowSpec, weekDays } from "@/lib/datetime/week";
 import { kickMember } from "@/lib/firestore/kickClient";
 import { transferLeadership } from "@/lib/firestore/transferClient";
 import { safeHttpUrl } from "@/lib/utils/url";
@@ -17,6 +19,7 @@ import {
   reelSlotsForTier,
   type Availability,
   type Member,
+  type Party,
   type RaidContent,
   type SlotKey,
 } from "@/types";
@@ -37,6 +40,8 @@ interface Props {
   /** 강퇴된 후 호출 (모달 닫기 등) */
   onKicked?: () => void;
   partyId: string;
+  /** 일정 조율 방식 판단용 (timeGrid 그리드 vs dayOnly 요일 리스트) */
+  party: Party;
 }
 
 export function MemberDetailModal({
@@ -50,6 +55,7 @@ export function MemberDetailModal({
   viewerIsLeader,
   onKicked,
   partyId,
+  party,
 }: Props) {
   const [kicking, setKicking] = useState(false);
   const [kickError, setKickError] = useState<string | null>(null);
@@ -106,6 +112,30 @@ export function MemberDetailModal({
     () => new Set<SlotKey>(memberAvailability?.available ?? []),
     [memberAvailability],
   );
+
+  // dayOnly 공대면 요일 리스트로 표시 (이 멤버의 선택 요일만, read-only).
+  const isDayOnly = party.scheduleMode === "dayOnly";
+  const fixed = useMemo(
+    () => fixedWindowSpec(party, reelLen) ?? undefined,
+    [party, reelLen],
+  );
+  const memberDayOnly: DayOnlyDayInfo[] = useMemo(() => {
+    if (!isDayOnly || !fixed) return [];
+    return weekDays(weekStart).map((d) => {
+      const daySlots = buildDayWindow(d.iso, reelLen, fixed).slotKeys;
+      const selfOn = daySlots.length > 0 && daySlots.every((k) => memberSlots.has(k));
+      return {
+        iso: d.iso,
+        label: d.label,
+        dow: d.dow,
+        isWeekend: d.isWeekend,
+        selfOn,
+        othersN: 0,
+        departable: false,
+        names: [],
+      };
+    });
+  }, [isDayOnly, fixed, weekStart, reelLen, memberSlots]);
 
   if (!member) return null;
   const profileSet = member.profileSetup !== false;
@@ -212,14 +242,24 @@ export function MemberDetailModal({
             )}
           </h3>
           <div className="rounded-md border border-border bg-card/50 p-3">
-            <AvailabilityGrid
-              weekStart={weekStart}
-              reelLen={reelLen}
-              mode="input"
-              selfSlots={memberSlots}
-              othersCount={new Map()}
-              disableTooltip
-            />
+            {isDayOnly ? (
+              fixed ? (
+                <DayOnlyGrid mode="input" days={memberDayOnly} heatMax={1} />
+              ) : (
+                <p className="py-4 text-center text-sm text-muted-foreground">
+                  일정 설정 정보를 불러올 수 없습니다.
+                </p>
+              )
+            ) : (
+              <AvailabilityGrid
+                weekStart={weekStart}
+                reelLen={reelLen}
+                mode="input"
+                selfSlots={memberSlots}
+                othersCount={new Map()}
+                disableTooltip
+              />
+            )}
           </div>
         </section>
 

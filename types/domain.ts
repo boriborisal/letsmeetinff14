@@ -107,6 +107,11 @@ export interface User {
 
 export type PartyRole = "leader" | "member";
 
+// 일정 조율 방식.
+//   timeGrid — 30분 슬롯 그리드로 시간대를 직접 입력 (기존 기본)
+//   dayOnly  — 레이드 시간을 고정하고 요일만 입력. fixedStart~fixedEnd 윈도우.
+export type ScheduleMode = "timeGrid" | "dayOnly";
+
 export interface Party {
   id: string;
   name: string;
@@ -117,6 +122,11 @@ export interface Party {
   progressNote?: string;        // 진도 메모 (자유 텍스트, 모든 멤버 편집 가능)
   reelsPerSession?: number;     // 한 세션에 진행할 1릴 개수 (1~4, default 1).
                                 // 추천 카드/일정 확정 길이의 기준.
+                                // dayOnly에선 고정 윈도우의 1릴 개수로 자동 설정.
+  // 일정 조율 방식. 필드가 없으면 "timeGrid" (기존 공대 하위호환).
+  scheduleMode?: ScheduleMode;
+  fixedStart?: string;          // dayOnly 전용 "HH:mm" (KST). 예: "21:30"
+  fixedEnd?: string;            // dayOnly 전용 "HH:mm". 종료 ≤ 시작이면 자정 넘김.
 }
 
 export interface Member {

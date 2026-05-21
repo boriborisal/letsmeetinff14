@@ -58,9 +58,19 @@ export function weekDays(weekStart: string): DayHeader[] {
 }
 
 /**
+ * dayOnly 모드의 고정 윈도우 스펙. buildDayWindow / weekWindowSlotKeys에 전달.
+ *   startHHmm — 윈도우 시작 "HH:mm"
+ *   slots     — 30분 슬롯 총 개수 (= duration / 30)
+ */
+export interface FixedWindowSpec {
+  startHHmm: string;
+  slots: number;
+}
+
+/**
  * 한 day의 표시 윈도우 슬롯 키 목록.
- * UI.md: 18:00 → 02:00 (다음날) 까지가 default, 8시간 = 16개 30분 슬롯.
- * tier별 1릴 길이로 나눠떨어지게 윈도우 길이를 약간 조정.
+ * - timeGrid (fixed 없음): UI.md default — 18:00부터, tier별 1릴 길이로 나눠떨어지게.
+ * - dayOnly  (fixed 있음): fixed.startHHmm부터 fixed.slots개.
  */
 export interface DayWindow {
   startKey: SlotKey;
@@ -70,13 +80,25 @@ export interface DayWindow {
   hourLabels: { atIndex: number; label: string }[]; // 1릴 경계마다 좌측 시간 라벨
 }
 
-export function buildDayWindow(dayIso: string, reelLen: number): DayWindow {
-  // 18:00 시작. 2슬롯=1h, 3슬롯=1.5h, 4슬롯=2h.
-  // 윈도우 끝은 18:00 + reelCount * reelLen * 30분.
-  // 적당한 reelCount: 4슬롯=4릴(8h), 3슬롯=5릴(7.5h), 2슬롯=8릴(8h).
-  const reelCount = reelLen === 4 ? 4 : reelLen === 3 ? 5 : 8;
-  const totalSlots = reelLen * reelCount;
-  const startKey = `${dayIso}T18:00`;
+export function buildDayWindow(
+  dayIso: string,
+  reelLen: number,
+  fixed?: FixedWindowSpec,
+): DayWindow {
+  let startKey: SlotKey;
+  let totalSlots: number;
+  let reelCount: number;
+  if (fixed) {
+    // dayOnly: 고정 시작 시각 + 고정 슬롯 수.
+    startKey = `${dayIso}T${fixed.startHHmm}`;
+    totalSlots = fixed.slots;
+    reelCount = Math.floor(fixed.slots / reelLen);
+  } else {
+    // timeGrid: 18:00 시작. 적당한 reelCount: 4슬롯=4릴(8h), 3슬롯=5릴(7.5h), 2슬롯=8릴(8h).
+    reelCount = reelLen === 4 ? 4 : reelLen === 3 ? 5 : 8;
+    totalSlots = reelLen * reelCount;
+    startKey = `${dayIso}T18:00`;
+  }
   const keys: SlotKey[] = [];
   for (let i = 0; i < totalSlots; i++) {
     keys.push(addMinutes(startKey, i * FOOD_MIN));
@@ -100,13 +122,96 @@ function hhmm(s: string): string {
 }
 
 /** 주 전체의 모든 슬롯 키 (7일 윈도우 합) — Firestore 저장 시 사용 */
-export function weekWindowSlotKeys(weekStart: string, reelLen: number): SlotKey[] {
+export function weekWindowSlotKeys(
+  weekStart: string,
+  reelLen: number,
+  fixed?: FixedWindowSpec,
+): SlotKey[] {
   const days = weekDays(weekStart);
   const out: SlotKey[] = [];
   for (const d of days) {
-    out.push(...buildDayWindow(d.iso, reelLen).slotKeys);
+    out.push(...buildDayWindow(d.iso, reelLen, fixed).slotKeys);
   }
   return out;
+}
+
+// ─────────────────────────────────────────────
+// dayOnly 고정 시간 윈도우 — 검증 + 헬퍼
+// ─────────────────────────────────────────────
+
+/** "HH:mm" → 분(0~1439). 형식 오류면 null. */
+function hhmmToMin(s: string): number | null {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(s);
+  if (!m) return null;
+  const h = Number(m[1]);
+  const min = Number(m[2]);
+  if (h > 23 || min > 59) return null;
+  return h * 60 + min;
+}
+
+/** "HH:mm"에 분을 더한 "HH:mm" (24시간 wrap). */
+export function shiftHHmm(hhmm: string, minutes: number): string {
+  const base = hhmmToMin(hhmm) ?? 0;
+  const total = (((base + minutes) % 1440) + 1440) % 1440;
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+export interface FixedWindowEval {
+  ok: boolean;
+  reason?: string;       // ok=false일 때 사용자에게 보일 사유
+  slots: number;         // 30분 슬롯 수
+  windowReels: number;   // 1릴 개수 (ok=true일 때만 의미)
+  durationMin: number;   // 윈도우 길이(분)
+}
+
+/**
+ * dayOnly 고정 윈도우 검증.
+ * 종료 ≤ 시작이면 자정 넘김으로 해석. 윈도우 길이는 1릴의 양의 정수배여야 함.
+ */
+export function evaluateFixedWindow(
+  fixedStart: string,
+  fixedEnd: string,
+  reelLen: number,
+): FixedWindowEval {
+  const s = hhmmToMin(fixedStart);
+  const e = hhmmToMin(fixedEnd);
+  const reelMin = reelLen * FOOD_MIN;
+  if (s === null || e === null) {
+    return { ok: false, reason: "시간 형식이 올바르지 않습니다.", slots: 0, windowReels: 0, durationMin: 0 };
+  }
+  const durationMin = (((e - s) % 1440) + 1440) % 1440;
+  if (durationMin === 0) {
+    return { ok: false, reason: "시작과 종료 시각이 같습니다.", slots: 0, windowReels: 0, durationMin: 0 };
+  }
+  if (durationMin % FOOD_MIN !== 0) {
+    return { ok: false, reason: "30분 단위로 맞춰주세요.", slots: 0, windowReels: 0, durationMin };
+  }
+  const slots = durationMin / FOOD_MIN;
+  if (durationMin % reelMin !== 0) {
+    return {
+      ok: false,
+      reason: `1릴(${reelMin}분)의 배수가 되도록 맞춰주세요. (현재 ${durationMin}분)`,
+      slots,
+      windowReels: 0,
+      durationMin,
+    };
+  }
+  return { ok: true, slots, windowReels: durationMin / reelMin, durationMin };
+}
+
+/**
+ * Party에서 dayOnly 고정 윈도우 스펙을 도출. timeGrid거나 설정 불완전/무효면 null.
+ */
+export function fixedWindowSpec(
+  party: { scheduleMode?: string; fixedStart?: string; fixedEnd?: string },
+  reelLen: number,
+): FixedWindowSpec | null {
+  if (party.scheduleMode !== "dayOnly" || !party.fixedStart || !party.fixedEnd) return null;
+  const ev = evaluateFixedWindow(party.fixedStart, party.fixedEnd, reelLen);
+  if (!ev.ok) return null;
+  return { startHHmm: party.fixedStart, slots: ev.slots };
 }
 
 // re-export so call-sites don't need two imports

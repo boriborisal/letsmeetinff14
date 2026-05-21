@@ -20,12 +20,15 @@ import {
 import { getFirebaseDb } from "@/lib/firebase/client";
 import { generatePartyId, generateInviteCode } from "@/lib/utils/id";
 import { getRaidContent } from "@/lib/raid/contents";
-import type { Party, RaidContent, User } from "@/types";
+import type { Party, RaidContent, ScheduleMode, User } from "@/types";
 
 export interface CreatePartyInput {
   name?: string;                 // 비우면 raid shortKor 기반으로 자동 생성
   raidContentId: RaidContent["id"];
   reelsPerSession?: number;      // default 1
+  scheduleMode?: ScheduleMode;   // default "timeGrid"
+  fixedStart?: string;           // dayOnly 전용 "HH:mm"
+  fixedEnd?: string;             // dayOnly 전용 "HH:mm"
   leader: { uid: User["uid"]; charName: string };
 }
 
@@ -63,6 +66,14 @@ export async function createParty(input: CreatePartyInput): Promise<{ partyId: s
     inviteCode,
     reelsPerSession: clampReels(input.reelsPerSession ?? 1),
   };
+  // 일정 조율 방식 — dayOnly면 고정 시간 함께 저장. (undefined 필드는 쓰지 않음)
+  if (input.scheduleMode === "dayOnly" && input.fixedStart && input.fixedEnd) {
+    party.scheduleMode = "dayOnly";
+    party.fixedStart = input.fixedStart;
+    party.fixedEnd = input.fixedEnd;
+  } else {
+    party.scheduleMode = "timeGrid";
+  }
 
   const partyRef = doc(db, "parties", partyId);
   const memberRef = doc(db, "parties", partyId, "members", input.leader.uid);
@@ -99,13 +110,31 @@ export async function createParty(input: CreatePartyInput): Promise<{ partyId: s
  */
 export async function updateParty(
   partyId: string,
-  patch: { name?: string; raidContentId?: RaidContent["id"]; reelsPerSession?: number },
+  patch: {
+    name?: string;
+    raidContentId?: RaidContent["id"];
+    reelsPerSession?: number;
+    scheduleMode?: ScheduleMode;
+    fixedStart?: string;
+    fixedEnd?: string;
+  },
 ): Promise<void> {
   const db = getFirebaseDb();
   const update: Record<string, unknown> = {};
   if (patch.name !== undefined) update.name = patch.name;
   if (patch.raidContentId !== undefined) update.raidContentId = patch.raidContentId;
   if (patch.reelsPerSession !== undefined) update.reelsPerSession = clampReels(patch.reelsPerSession);
+  if (patch.scheduleMode !== undefined) {
+    update.scheduleMode = patch.scheduleMode;
+    if (patch.scheduleMode === "dayOnly") {
+      if (patch.fixedStart !== undefined) update.fixedStart = patch.fixedStart;
+      if (patch.fixedEnd !== undefined) update.fixedEnd = patch.fixedEnd;
+    } else {
+      // timeGrid로 전환 시 고정 시간 필드 제거.
+      update.fixedStart = deleteField();
+      update.fixedEnd = deleteField();
+    }
+  }
   if (Object.keys(update).length === 0) return;
   await updateDoc(doc(db, "parties", partyId), update);
 }

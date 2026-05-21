@@ -55,11 +55,20 @@ export function weekSlotKeys(weekStartIso: string /* "YYYY-MM-DD" 월요일 */):
 // 1릴 윈도우 생성
 // ─────────────────────────────────────────────
 
-/** 주어진 30분 슬롯 키 배열을 N슬롯짜리 1릴 윈도우들로 슬라이드 (sliding window). */
-export function buildReelWindows(slotKeys: SlotKey[], tier: RaidTier): ReelWindow[] {
+/**
+ * 주어진 30분 슬롯 키 배열을 N슬롯짜리 1릴 윈도우들로 분할.
+ *  - 기본(sliding): 한 슬롯씩 밀며 모든 시작점 후보 생성 (timeGrid).
+ *  - aligned: reelLen 단위로 비중첩 분할 (dayOnly — 고정 윈도우는 시작점이 정해짐).
+ */
+export function buildReelWindows(
+  slotKeys: SlotKey[],
+  tier: RaidTier,
+  opts?: { aligned?: boolean },
+): ReelWindow[] {
   const reelLen = reelSlotsForTier(tier);
+  const step = opts?.aligned ? reelLen : 1;
   const out: ReelWindow[] = [];
-  for (let i = 0; i + reelLen <= slotKeys.length; i++) {
+  for (let i = 0; i + reelLen <= slotKeys.length; i += step) {
     const window = slotKeys.slice(i, i + reelLen);
     // 연속성 검증: 각 슬롯이 직전 슬롯 + FOOD_MIN 이어야 함
     let contiguous = true;

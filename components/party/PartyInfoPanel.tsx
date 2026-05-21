@@ -14,7 +14,9 @@ import {
 } from "@/lib/firestore/parties";
 import { disbandParty } from "@/lib/firestore/disbandClient";
 import { activeRaidContents, getRaidContent } from "@/lib/raid/contents";
+import { evaluateFixedWindow, shiftHHmm } from "@/lib/datetime/week";
 import { JobIcon } from "@/components/common/JobIcon";
+import { ScheduleModeFields } from "./ScheduleModeFields";
 import { MemberDetailModal } from "./MemberDetailModal";
 import { safeHttpUrl } from "@/lib/utils/url";
 import {
@@ -24,6 +26,7 @@ import {
   type Availability,
   type Member,
   type Party,
+  type ScheduleMode,
 } from "@/types";
 
 interface Props {
@@ -54,7 +57,11 @@ export function PartyInfoPanel({
   const raid = getRaidContent(party.raidContentId);
   const reelMin = raid ? REEL_MIN_BY_TIER[raid.tier] : 120;
   const reels = party.reelsPerSession ?? 1;
-  const sessionLabel = `${reels}릴 (${formatMin(reelMin * reels)})`;
+  // dayOnly면 고정 시간, 아니면 세션 1릴 길이.
+  const sessionLabel =
+    party.scheduleMode === "dayOnly" && party.fixedStart && party.fixedEnd
+      ? `매일 ${party.fixedStart}~${party.fixedEnd}`
+      : `세션 ${reels}릴 (${formatMin(reelMin * reels)})`;
 
   return (
     <aside className="space-y-5">
@@ -64,7 +71,7 @@ export function PartyInfoPanel({
           <h1 className="truncate text-xl font-semibold tracking-tight">{party.name}</h1>
           <p className="text-base text-muted-foreground">
             {raid?.nameKor ?? party.raidContentId}
-            <span className="text-muted-foreground/70"> · 세션 {sessionLabel}</span>
+            <span className="text-muted-foreground/70"> · {sessionLabel}</span>
           </p>
         </div>
         {isLeader && !editing ? (
@@ -245,6 +252,7 @@ export function PartyInfoPanel({
         onClose={() => setSelectedMember(null)}
         member={selectedMember}
         raid={raidForModal}
+        party={party}
         weekStart={weekStart}
         memberAvailability={
           selectedMember
@@ -288,6 +296,11 @@ function EditPartyForm({
   const [name, setName] = useState(party.name);
   const [raidId, setRaidId] = useState(party.raidContentId);
   const [reelsPerSession, setReelsPerSession] = useState<number>(party.reelsPerSession ?? 1);
+  const [scheduleMode, setScheduleMode] = useState<ScheduleMode>(
+    party.scheduleMode ?? "timeGrid",
+  );
+  const [fixedStart, setFixedStart] = useState(party.fixedStart ?? "21:30");
+  const [fixedEnd, setFixedEnd] = useState(party.fixedEnd ?? "23:00");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -295,6 +308,12 @@ function EditPartyForm({
     const r = getRaidContent(raidId);
     return r ? REEL_MIN_BY_TIER[r.tier] : 120;
   }, [raidId]);
+  const reelLen = reelMin / 30;
+
+  function handleModeChange(m: ScheduleMode) {
+    setScheduleMode(m);
+    if (m === "dayOnly") setFixedEnd(shiftHHmm(fixedStart, reelMin));
+  }
 
   const grouped = useMemo(() => {
     const sav = raids.filter((r) => r.tier === "savage_4" || r.tier === "savage_1_3");
@@ -307,19 +326,35 @@ function EditPartyForm({
     e.preventDefault();
     if (!raidId) return setError("레이드를 선택해주세요.");
     const finalName = name.trim() || defaultPartyName(raidId);
+
+    // dayOnly면 고정 시간 검증.
+    let dayOnly: { fixedStart: string; fixedEnd: string; reels: number } | null = null;
+    if (scheduleMode === "dayOnly") {
+      const ev = evaluateFixedWindow(fixedStart, fixedEnd, reelLen);
+      if (!ev.ok) return setError(`고정 레이드 시간: ${ev.reason}`);
+      dayOnly = { fixedStart, fixedEnd, reels: ev.windowReels };
+    }
+    const finalReels = dayOnly ? dayOnly.reels : reelsPerSession;
+
     setSaving(true);
     setError(null);
     try {
       await updateParty(party.id, {
         name: finalName,
         raidContentId: raidId,
-        reelsPerSession,
+        reelsPerSession: finalReels,
+        scheduleMode,
+        fixedStart: dayOnly?.fixedStart,
+        fixedEnd: dayOnly?.fixedEnd,
       });
       onSaved({
         ...party,
         name: finalName,
         raidContentId: raidId,
-        reelsPerSession,
+        reelsPerSession: finalReels,
+        scheduleMode,
+        fixedStart: dayOnly?.fixedStart,
+        fixedEnd: dayOnly?.fixedEnd,
       });
     } catch (err) {
       console.error(err);
@@ -370,6 +405,21 @@ function EditPartyForm({
           </optgroup>
         </select>
       </div>
+
+      <ScheduleModeFields
+        reelLen={reelLen}
+        mode={scheduleMode}
+        fixedStart={fixedStart}
+        fixedEnd={fixedEnd}
+        onModeChange={handleModeChange}
+        onFixedChange={(s, e) => {
+          setFixedStart(s);
+          setFixedEnd(e);
+        }}
+        originalMode={party.scheduleMode ?? "timeGrid"}
+      />
+
+      {scheduleMode === "timeGrid" ? (
       <div className="space-y-1">
         <label htmlFor="edit-reels" className="text-[15px] text-muted-foreground">
           한 세션에 진행할 1릴 개수
@@ -387,6 +437,7 @@ function EditPartyForm({
           ))}
         </select>
       </div>
+      ) : null}
       {error ? (
         <p className="rounded-md border border-destructive/50 bg-destructive/10 px-2 py-1.5 text-[15px] text-destructive">
           {error}

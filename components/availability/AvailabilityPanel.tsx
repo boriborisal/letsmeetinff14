@@ -12,6 +12,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AvailabilityGrid } from "./AvailabilityGrid";
+import { DayOnlyGrid, type DayOnlyDayInfo } from "./DayOnlyGrid";
 import { WeekNavigator } from "./WeekNavigator";
 import { Legend } from "./Legend";
 import { RecommendationCard } from "./RecommendationCard";
@@ -27,7 +28,13 @@ import {
   type ReelFeasibility,
   type SlotKey,
 } from "@/types";
-import { shiftWeek, weekWindowSlotKeys } from "@/lib/datetime/week";
+import {
+  buildDayWindow,
+  fixedWindowSpec,
+  shiftWeek,
+  weekDays,
+  weekWindowSlotKeys,
+} from "@/lib/datetime/week";
 
 interface Props {
   party: Party;
@@ -50,6 +57,22 @@ export function AvailabilityPanel({
   const tier = raid?.tier ?? "ultimate";
   const reelLen = useMemo(() => reelSlotsForTier(tier), [tier]);
   const isLeader = uid === party.leaderUid;
+
+  // dayOnly 모드 — 고정 윈도우 스펙 도출 (timeGrid거나 설정 무효면 undefined).
+  const isDayOnly = party.scheduleMode === "dayOnly";
+  const fixed = useMemo(
+    () => fixedWindowSpec(party, reelLen) ?? undefined,
+    [party, reelLen],
+  );
+  // dayOnly에선 고정 윈도우의 1릴 개수가 곧 세션 길이.
+  const windowReels = useMemo(() => {
+    if (!isDayOnly || !fixed) return party.reelsPerSession ?? 1;
+    return Math.max(1, Math.floor(fixed.slots / reelLen));
+  }, [isDayOnly, fixed, reelLen, party.reelsPerSession]);
+  const memberByUid = useMemo(
+    () => new Map(members.map((m) => [m.uid, m])),
+    [members],
+  );
 
   // 본인 응답 / 드래프트 상태
   const [savedSlots, setSavedSlots] = useState<Set<SlotKey>>(new Set());
@@ -141,8 +164,9 @@ export function AvailabilityPanel({
 
   // 출발 가능 1릴 (상시 — 편집 중에도 selfSlots(=draft) 기준 live preview)
   const feasibility: ReelFeasibility[] = useMemo(() => {
-    const slotKeys = weekWindowSlotKeys(weekStart, reelLen);
-    const windows = buildReelWindows(slotKeys, tier);
+    const slotKeys = weekWindowSlotKeys(weekStart, reelLen, fixed);
+    // dayOnly는 고정 윈도우라 1릴 시작점이 정해짐 → aligned 분할.
+    const windows = buildReelWindows(slotKeys, tier, { aligned: isDayOnly });
     const allAvail: { uid: string; available: SlotKey[] }[] = [
       ...othersAvail
         .filter((a) => matchableUids.has(a.uid))
@@ -157,12 +181,50 @@ export function AvailabilityPanel({
       availabilities: allAvail,
       windows,
     });
-  }, [weekStart, reelLen, tier, othersAvail, selfSlots, uid, matchableMembers, matchableUids]);
+  }, [weekStart, reelLen, tier, fixed, isDayOnly, othersAvail, selfSlots, uid, matchableMembers, matchableUids]);
 
   const departReelStarts = useMemo(
     () => new Set(feasibility.filter((f) => f.canDepart).map((f) => f.reel.startKey)),
     [feasibility],
   );
+
+  // dayOnly 모드 — 요일별 표시 데이터 (DayOnlyGrid용).
+  const dayOnlyDays: DayOnlyDayInfo[] = useMemo(() => {
+    if (!isDayOnly || !fixed) return [];
+    // 출발 가능 1릴이 속한 날짜 (요일 단위 토글이라 같은 날의 1릴은 동일 판정).
+    const departByDay = new Set<string>();
+    for (const f of feasibility) {
+      if (f.canDepart) departByDay.add(f.reel.startKey.split("T")[0]!);
+    }
+    return weekDays(weekStart).map((d) => {
+      const daySlots = buildDayWindow(d.iso, reelLen, fixed).slotKeys;
+      const selfOn = daySlots.length > 0 && daySlots.every((k) => selfSlots.has(k));
+      let othersN = 0;
+      const names: string[] = [];
+      for (const a of othersAvail) {
+        const set = new Set(a.available);
+        if (daySlots.every((k) => set.has(k))) {
+          othersN++;
+          const m = memberByUid.get(a.uid);
+          if (m) names.push(m.charName);
+        }
+      }
+      if (selfOn) {
+        const me = memberByUid.get(uid);
+        if (me) names.push(me.charName);
+      }
+      return {
+        iso: d.iso,
+        label: d.label,
+        dow: d.dow,
+        isWeekend: d.isWeekend,
+        selfOn,
+        othersN,
+        departable: departByDay.has(d.iso),
+        names,
+      };
+    });
+  }, [isDayOnly, fixed, weekStart, reelLen, feasibility, selfSlots, othersAvail, memberByUid, uid]);
 
   // 셀 토글 (편집 가능할 때만)
   const onToggle = useCallback(
@@ -178,11 +240,28 @@ export function AvailabilityPanel({
     [editable],
   );
 
+  // 요일 토글 (dayOnly) — 그 요일 고정 윈도우의 모든 슬롯을 한 번에 on/off.
+  const onToggleDay = useCallback(
+    (iso: string, nextValue: boolean) => {
+      if (!editable || !fixed) return;
+      const daySlots = buildDayWindow(iso, reelLen, fixed).slotKeys;
+      setDraftSlots((prev) => {
+        const next = new Set(prev);
+        for (const k of daySlots) {
+          if (nextValue) next.add(k);
+          else next.delete(k);
+        }
+        return next;
+      });
+    },
+    [editable, fixed, reelLen],
+  );
+
   async function submit() {
     setSubmitting(true);
     setSaveError(null);
     try {
-      const validKeys = new Set(weekWindowSlotKeys(weekStart, reelLen));
+      const validKeys = new Set(weekWindowSlotKeys(weekStart, reelLen, fixed));
       const filtered = Array.from(draftSlots).filter((k) => validKeys.has(k));
       await saveMyAvailability({
         partyId: party.id,
@@ -228,9 +307,13 @@ export function AvailabilityPanel({
       <div className="space-y-1">
         <h2 className="text-base font-medium">가능 시간</h2>
         <p className="text-[15px] text-muted-foreground">
-          {editable
-            ? "30분 단위, 셀 클릭/드래그로 토글 — 출발 가능 1릴은 외곽선으로 강조"
-            : "제출 완료 — 통합 결과로 표시"}
+          {!editable
+            ? "제출 완료 — 통합 결과로 표시"
+            : isDayOnly
+              ? fixed
+                ? `레이드 시간 ${party.fixedStart}~${party.fixedEnd} 고정 — 가능한 요일을 클릭`
+                : "일정 설정 오류 — 공대장이 고정 시간을 다시 설정해야 합니다"
+              : "30분 단위, 셀 클릭/드래그로 토글 — 출발 가능 1릴은 외곽선으로 강조"}
         </p>
       </div>
 
@@ -256,15 +339,30 @@ export function AvailabilityPanel({
           partyId={party.id}
           isLeader={isLeader}
           uid={uid}
-          reelsPerSession={party.reelsPerSession ?? 1}
+          reelsPerSession={isDayOnly ? windowReels : party.reelsPerSession ?? 1}
           unsetMemberCount={unsetCount}
           onConfirmed={() => { /* 일정 확정은 ScheduleList가 자체 onSnapshot으로 갱신 */ }}
         />
       ) : null}
 
       <div className="rounded-md border border-border bg-card p-3">
-        {weekLoading ? (
-          <p className="py-12 text-center text-base text-muted-foreground">로딩…</p>
+        {isDayOnly ? (
+          fixed ? (
+            <DayOnlyGrid
+              mode={gridMode}
+              days={dayOnlyDays}
+              heatMax={
+                gridMode === "input"
+                  ? Math.max(1, totalOthers)
+                  : Math.max(1, members.length)
+              }
+              onToggleDay={editable ? onToggleDay : undefined}
+            />
+          ) : (
+            <p className="py-8 text-center text-base text-muted-foreground">
+              일정 설정이 올바르지 않습니다. 공대장이 [수정]에서 고정 시간을 다시 설정해야 합니다.
+            </p>
+          )
         ) : (
           <AvailabilityGrid
             weekStart={weekStart}

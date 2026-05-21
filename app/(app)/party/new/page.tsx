@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { activeRaidContents, getRaidContent } from "@/lib/raid/contents";
 import { createParty } from "@/lib/firestore/parties";
-import { REEL_MIN_BY_TIER } from "@/types";
+import { ScheduleModeFields } from "@/components/party/ScheduleModeFields";
+import { evaluateFixedWindow, shiftHHmm } from "@/lib/datetime/week";
+import { REEL_MIN_BY_TIER, type ScheduleMode } from "@/types";
 
 export default function NewPartyPage() {
   const { user } = useAuth();
@@ -19,11 +21,23 @@ export default function NewPartyPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 1릴 분 (선택한 raid 기준)
+  // 일정 조율 방식
+  const [scheduleMode, setScheduleMode] = useState<ScheduleMode>("timeGrid");
+  const [fixedStart, setFixedStart] = useState("21:30");
+  const [fixedEnd, setFixedEnd] = useState("23:00");
+
+  // 1릴 분 / 슬롯 수 (선택한 raid 기준)
   const reelMin = useMemo(() => {
     const raid = getRaidContent(raidId);
     return raid ? REEL_MIN_BY_TIER[raid.tier] : 120;
   }, [raidId]);
+  const reelLen = reelMin / 30;
+
+  // 모드 전환 시 dayOnly면 현재 1릴에 맞춘 기본 종료 시각으로 스냅.
+  function handleModeChange(m: ScheduleMode) {
+    setScheduleMode(m);
+    if (m === "dayOnly") setFixedEnd(shiftHHmm(fixedStart, reelMin));
+  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -31,13 +45,24 @@ export default function NewPartyPage() {
     if (!charName.trim()) return setError("본인 캐릭명을 입력해주세요.");
     if (!raidId) return setError("도전할 레이드를 선택해주세요.");
 
+    // dayOnly면 고정 시간 검증 — 1릴 배수가 아니면 차단.
+    let dayOnly: { fixedStart: string; fixedEnd: string; reels: number } | null = null;
+    if (scheduleMode === "dayOnly") {
+      const ev = evaluateFixedWindow(fixedStart, fixedEnd, reelLen);
+      if (!ev.ok) return setError(`고정 레이드 시간: ${ev.reason}`);
+      dayOnly = { fixedStart, fixedEnd, reels: ev.windowReels };
+    }
+
     setSubmitting(true);
     setError(null);
     try {
       const { partyId } = await createParty({
         name: name.trim(),
         raidContentId: raidId,
-        reelsPerSession,
+        reelsPerSession: dayOnly ? dayOnly.reels : reelsPerSession,
+        scheduleMode,
+        fixedStart: dayOnly?.fixedStart,
+        fixedEnd: dayOnly?.fixedEnd,
         leader: { uid: user.uid, charName: charName.trim() },
       });
       router.replace(`/party/${partyId}`);
@@ -115,6 +140,19 @@ export default function NewPartyPage() {
           </p>
         </div>
 
+        <ScheduleModeFields
+          reelLen={reelLen}
+          mode={scheduleMode}
+          fixedStart={fixedStart}
+          fixedEnd={fixedEnd}
+          onModeChange={handleModeChange}
+          onFixedChange={(s, e) => {
+            setFixedStart(s);
+            setFixedEnd(e);
+          }}
+        />
+
+        {scheduleMode === "timeGrid" ? (
         <div className="space-y-1.5">
           <label htmlFor="reels" className="text-xs text-muted-foreground">
             한 세션에 진행할 1릴 개수
@@ -135,6 +173,7 @@ export default function NewPartyPage() {
             추천 시간대와 일정 확정 길이가 이 값에 맞춰 결정됩니다. 나중에 변경 가능.
           </p>
         </div>
+        ) : null}
 
         <div className="space-y-1.5">
           <label htmlFor="char" className="text-xs text-muted-foreground">
