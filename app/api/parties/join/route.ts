@@ -23,6 +23,36 @@ interface JoinBody {
   charName?: string;
 }
 
+// GET /api/parties/join?code=XXX
+// 초대 링크로 진입한 사용자가 이미 그 공대 멤버인지 확인.
+// 가입 폼을 건너뛰고 바로 공대 페이지로 보낼지 판단하는 용도라 charName 불필요.
+export async function GET(req: NextRequest) {
+  const uid = await getUidFromRequest(req);
+  if (!uid) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const code = req.nextUrl.searchParams.get("code")?.trim().toUpperCase();
+  if (!code) {
+    return NextResponse.json({ error: "초대 코드를 입력해주세요." }, { status: 400 });
+  }
+
+  const db = getAdminDb();
+  const partySnap = await db
+    .collection("parties")
+    .where("inviteCode", "==", code)
+    .limit(1)
+    .get();
+
+  if (partySnap.empty) {
+    return NextResponse.json({ error: "유효하지 않은 초대 코드입니다." }, { status: 404 });
+  }
+
+  const partyId = partySnap.docs[0]!.id;
+  const existing = await db.doc(`parties/${partyId}/members/${uid}`).get();
+  return NextResponse.json({ partyId, alreadyMember: existing.exists });
+}
+
 export async function POST(req: NextRequest) {
   const uid = await getUidFromRequest(req);
   if (!uid) {

@@ -120,20 +120,7 @@ export function PartyInfoPanel({
       ) : null}
 
       {/* 초대 코드 */}
-      <section className="space-y-1.5 rounded-md border border-border bg-secondary px-3 py-2.5">
-        <p className="text-[15px] text-muted-foreground">초대 코드</p>
-        <p className="font-mono text-xl tracking-widest">{party.inviteCode}</p>
-        <p className="text-base text-muted-foreground">
-          공대원에게 코드 또는{" "}
-          <Link
-            href={`/join?code=${party.inviteCode}`}
-            className="underline underline-offset-2 hover:text-foreground"
-          >
-            가입 링크
-          </Link>
-          .
-        </p>
-      </section>
+      <InviteSection party={party} members={members} />
 
       {/* 진도 메모 (모든 멤버 편집 가능) */}
       <ProgressNoteSection party={party} onUpdated={onPartyUpdated} />
@@ -293,6 +280,48 @@ export function PartyInfoPanel({
         }}
       />
     </aside>
+  );
+}
+
+// ─────────────────────────────────────────────
+// 초대 코드 + 가입 링크 복사
+// ─────────────────────────────────────────────
+
+function InviteSection({ party, members }: { party: Party; members: Member[] }) {
+  const [copied, setCopied] = useState(false);
+
+  // 초대 메시지에 쓸 공대장(공대 생성자) 캐릭터 이름.
+  const leaderName =
+    members.find((m) => m.uid === party.leaderUid)?.charName ?? "공대장";
+
+  async function copyInviteLink() {
+    const link = `${window.location.origin}/join?code=${party.inviteCode}`;
+    const message = `${leaderName}님의 ${party.name}에 참가하세요. ${link}`;
+    try {
+      await navigator.clipboard.writeText(message);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // 클립보드 접근 실패 시 무시 — 초대 코드를 직접 전달하면 됨.
+    }
+  }
+
+  return (
+    <section className="space-y-1.5 rounded-md border border-border bg-secondary px-3 py-2.5">
+      <p className="text-[15px] text-muted-foreground">초대 코드</p>
+      <p className="font-mono text-xl tracking-widest">{party.inviteCode}</p>
+      <p className="text-base text-muted-foreground">
+        공대원에게 코드 또는{" "}
+        <button
+          type="button"
+          onClick={() => void copyInviteLink()}
+          className="underline underline-offset-2 transition hover:text-foreground"
+        >
+          {copied ? "초대 메시지 복사됨!" : "가입 링크 복사"}
+        </button>
+        .
+      </p>
+    </section>
   );
 }
 

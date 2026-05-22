@@ -28,6 +28,8 @@ interface Props {
   heatMax: number;
   /** INPUT 모드에서 요일 토글 시 호출. 없으면 읽기 전용. */
   onToggleDay?: (iso: string, next: boolean) => void;
+  /** INPUT 모드에서 가운데 "다른 공대원 …" 인원 텍스트 숨김 (멤버 프로필 read-only 뷰 등). */
+  hideOthers?: boolean;
 }
 
 // 행 배경 농도 — 그리드(.h1~.h8)보다 옅게 캡 (행엔 숫자가 있어 보조 신호로 충분).
@@ -40,7 +42,7 @@ function heatBg(n: number, max: number): string | undefined {
   return `hsl(var(--heat-base) / ${ROW_HEAT_ALPHA[bucket - 1]})`;
 }
 
-export function DayOnlyGrid({ mode, days, heatMax, onToggleDay }: Props) {
+export function DayOnlyGrid({ mode, days, heatMax, onToggleDay, hideOthers }: Props) {
   const [openIso, setOpenIso] = useState<string | null>(null);
   const editable = mode === "input" && !!onToggleDay;
 
@@ -89,9 +91,11 @@ export function DayOnlyGrid({ mode, days, heatMax, onToggleDay }: Props) {
               {/* 가운데: 인원 */}
               <span className="flex-1 text-[15px] text-muted-foreground">
                 {mode === "input"
-                  ? d.othersN > 0
-                    ? `다른 공대원 ${d.othersN}명`
-                    : "다른 공대원 없음"
+                  ? hideOthers
+                    ? null
+                    : d.othersN > 0
+                      ? `다른 공대원 ${d.othersN}명`
+                      : "다른 공대원 없음"
                   : `응답 ${count}명`}
               </span>
 

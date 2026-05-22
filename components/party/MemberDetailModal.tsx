@@ -247,7 +247,7 @@ export function MemberDetailModal({
           <div className="rounded-md border border-border bg-card/50 p-3">
             {isDayOnly ? (
               fixed ? (
-                <DayOnlyGrid mode="input" days={memberDayOnly} heatMax={1} />
+                <DayOnlyGrid mode="input" days={memberDayOnly} heatMax={1} hideOthers />
               ) : (
                 <p className="py-4 text-center text-sm text-muted-foreground">
                   일정 설정 정보를 불러올 수 없습니다.

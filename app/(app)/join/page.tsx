@@ -1,16 +1,49 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { joinPartyByCode } from "@/lib/firestore/joinClient";
+import { checkPartyMembership, joinPartyByCode } from "@/lib/firestore/joinClient";
 
 export default function JoinPage() {
   const router = useRouter();
   const params = useSearchParams();
-  const [code, setCode] = useState(() => (params.get("code") ?? "").toUpperCase());
+  const initialCode = (params.get("code") ?? "").toUpperCase();
+  const [code, setCode] = useState(initialCode);
   const [charName, setCharName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // 초대 링크(?code=)로 진입한 경우, 이미 그 공대 멤버라면 폼 없이 바로 공대로 이동.
+  // 확인이 끝날 때까지 폼 대신 로딩 화면을 보여준다.
+  const [checking, setChecking] = useState(initialCode.length > 0);
+
+  useEffect(() => {
+    if (!initialCode) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const { partyId, alreadyMember } = await checkPartyMembership(initialCode);
+        if (cancelled) return;
+        if (alreadyMember) {
+          router.replace(`/party/${partyId}`);
+          return; // 이동 중 — checking 유지해 폼이 깜빡 노출되지 않게.
+        }
+      } catch {
+        // 확인 실패(잘못된 코드 등)는 무시 — 사용자가 폼에서 직접 입력 가능.
+      }
+      if (!cancelled) setChecking(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [initialCode, router]);
+
+  if (checking) {
+    return (
+      <main className="grid min-h-[60vh] place-items-center text-sm text-muted-foreground">
+        확인 중…
+      </main>
+    );
+  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
