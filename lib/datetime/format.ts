@@ -30,3 +30,23 @@ export function describeReelRange(reelStart: SlotKey, reelEnd: SlotKey): string 
 export function reelEndKey(lastSlotKey: SlotKey, foodMin = 30): SlotKey {
   return addMinutes(lastSlotKey, foodMin);
 }
+
+/** unix ms → 게시판 날짜 표시. 오늘은 "HH:mm", 어제는 "어제", 그 외는 "YYYY-MM-DD". KST 기준. */
+export function formatBoardDate(ms: number): string {
+  const d = new Date(ms);
+  const now = new Date();
+  const sameDay =
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate();
+  if (sameDay) {
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mm = String(d.getMinutes()).padStart(2, "0");
+    return `${hh}:${mm}`;
+  }
+  const y = String(now.getFullYear());
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return yyyy === Number(y) ? `${mm}-${dd}` : `${yyyy}-${mm}-${dd}`;
+}

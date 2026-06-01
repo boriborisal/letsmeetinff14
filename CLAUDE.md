@@ -128,9 +128,9 @@ const REEL_BY_TIER = {
 ## 코드 규칙
 
 - **타입은 `/types`에 모은다**. 도메인 타입(Job, Role, Slot, RaidContent, Member, Availability, ReelResult)은 한 파일에서 import.
-- **Firestore 컬렉션 이름은 복수형 영문**: `parties`, `members`, `availabilities`, `schedules`, `attendances`
+- **Firestore 컬렉션 이름은 복수형 영문**: `parties`, `members`, `availabilities`, `schedules`, `attendances`, `announcements`, `bugReports`
 - **한국어는 UI 텍스트에만**. 변수명·함수명·주석은 영어. 도메인 한국어 필드는 예외(`jobKor` 등).
-- **민감 정보는 환경변수**: `DISCORD_CLIENT_SECRET`, `FIREBASE_ADMIN_KEY`. `NEXT_PUBLIC_` 접두사 절대 금지.
+- **민감 정보는 환경변수**: `DISCORD_CLIENT_SECRET`, `FIREBASE_ADMIN_KEY`, `ADMIN_UIDS`. `NEXT_PUBLIC_` 접두사 절대 금지.
 - 컴포넌트는 기본 server component, 인터랙션 필요할 때만 `'use client'`.
 - **반응형 웹**. PC와 모바일 둘 다 잘 보이게. 모바일은 380px 너비에서 검증.
 

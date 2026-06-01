@@ -291,3 +291,45 @@ export const SLOT_DESC: Record<Slot, string> = {
   D3: "딜러 3",
   D4: "딜러 4",
 };
+
+// ─────────────────────────────────────────────
+// 사이트 공지사항 / 버그리포트 (사이트 전역, 공대 무관)
+// ─────────────────────────────────────────────
+
+export interface Announcement {
+  id: string;
+  title: string;
+  body: string;                 // 일반 텍스트 (줄바꿈 보존)
+  authorUid: User["uid"];
+  authorName: string;           // 운영자 표시명 (작성 시점 snapshot)
+  createdAt: number;
+  updatedAt?: number;
+  pinned?: boolean;             // 상단 고정. 정렬: pinned desc, createdAt desc
+}
+
+export type BugReportStatus = "open" | "in_progress" | "resolved";
+
+export interface BugReportReply {
+  body: string;
+  repliedByUid: User["uid"];    // 운영자 uid
+  repliedByName: string;
+  repliedAt: number;
+}
+
+export interface BugReport {
+  id: string;
+  title: string;
+  body: string;
+  authorUid: User["uid"];
+  authorName: string;
+  createdAt: number;
+  updatedAt?: number;
+  status: BugReportStatus;
+  reply?: BugReportReply;       // 운영자 답변 (선택)
+}
+
+export const BUG_STATUS_KOR: Record<BugReportStatus, string> = {
+  open: "접수",
+  in_progress: "확인 중",
+  resolved: "해결",
+};

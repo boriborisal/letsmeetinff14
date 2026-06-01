@@ -9,6 +9,8 @@
 //   parties/{partyId}/availabilities/{uid}_{weekStart}
 //   parties/{partyId}/schedules/{scheduleId}
 //   parties/{partyId}/schedules/{scheduleId}/attendances/{uid}
+//   announcements/{id}        — 사이트 공지사항 (운영자만 쓰기, 누구나 읽기)
+//   bugReports/{id}           — 사용자 버그리포트 (로그인 사용자 작성/조회)
 
 rules_version = '2';
 
@@ -108,6 +110,44 @@ service cloud.firestore {
           allow delete: if false;
         }
       }
+    }
+
+    // ─── announcements (사이트 공지사항) ───
+    // 모든 쓰기는 Admin SDK 경유 (서버에서 ADMIN_UIDS 화이트리스트 검증).
+    // 클라이언트에서 직접 쓰기 시도는 무조건 거부.
+    match /announcements/{id} {
+      allow read: if true;
+      allow create, update, delete: if false;
+    }
+
+    // ─── bugReports (사용자 버그리포트) ───
+    // 읽기·작성: 로그인 사용자 모두.
+    // 본인 글 수정: title/body만 (status·reply 변경 금지).
+    // 본인 글 삭제: 가능.
+    // 상태 변경 / 운영자 답변 / 타인 글 삭제: Admin SDK 경유 (rules에선 거부).
+    match /bugReports/{id} {
+      allow read: if isSignedIn();
+
+      allow create: if isSignedIn()
+        && request.resource.data.authorUid == request.auth.uid
+        && request.resource.data.status == 'open'
+        && !('reply' in request.resource.data);
+
+      // 본인 수정: status·reply·authorUid 불변 + title/body/updatedAt만 변경
+      allow update: if isSignedIn()
+        && resource.data.authorUid == request.auth.uid
+        && request.resource.data.authorUid == resource.data.authorUid
+        && request.resource.data.status == resource.data.status
+        && (
+          !('reply' in resource.data)
+            ? !('reply' in request.resource.data)
+            : ('reply' in request.resource.data
+                && request.resource.data.reply == resource.data.reply)
+        )
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['title', 'body', 'updatedAt']);
+
+      allow delete: if isSignedIn() && resource.data.authorUid == request.auth.uid;
     }
   }
 }

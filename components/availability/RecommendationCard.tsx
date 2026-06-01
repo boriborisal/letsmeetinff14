@@ -73,7 +73,7 @@ export function RecommendationCard({
       <div className="space-y-2">
         {unsetNote}
         <div className="rounded-md border border-border bg-card px-4 py-3 text-base text-muted-foreground">
-          {reelsPerSession}릴 연속 출발 가능한 시간이 아직 없습니다. 모든 공대원의 응답이 모이면 표시됩니다.
+          ({reelsPerSession}릴) 출발 가능한 시간이 아직 없습니다. 모든 공대원의 응답이 모이면 표시됩니다.
         </div>
       </div>
     );
