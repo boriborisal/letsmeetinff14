@@ -249,6 +249,27 @@ export default function BugDetailPage({ params }: { params: { id: string } }) {
         </article>
       )}
 
+      {/* 첨부 로그 — 작성자 본인 또는 운영자만. 다른 사용자에겐 URL/기기 정보 등을 노출하지 않음. */}
+      {r.debugInfo && (isMine || isAdmin) ? (
+        <details className="rounded-md border border-dashed border-border bg-secondary/30 px-4 py-3">
+          <summary className="cursor-pointer select-none text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            첨부된 로그 (본인·운영자만 표시)
+          </summary>
+          <dl className="mt-2 space-y-1 text-xs text-muted-foreground">
+            <div>URL: {r.debugInfo.url}</div>
+            <div>기기: {r.debugInfo.userAgent}</div>
+            <div>화면: {r.debugInfo.screen} · {r.debugInfo.online ? "온라인" : "오프라인"}</div>
+          </dl>
+          {r.debugInfo.consoleLog.length > 0 ? (
+            <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap rounded-md bg-background px-3 py-2 text-xs text-muted-foreground">
+              {r.debugInfo.consoleLog.join("\n")}
+            </pre>
+          ) : (
+            <p className="mt-2 text-xs text-muted-foreground">수집된 콘솔 에러 없음.</p>
+          )}
+        </details>
+      ) : null}
+
       {isAdmin ? (
         <div className="space-y-2 rounded-md border border-dashed border-border bg-secondary/30 px-4 py-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">

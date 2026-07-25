@@ -4,12 +4,15 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { createBugReport } from "@/lib/firestore/bugReports";
+import { getConsoleLog } from "@/lib/logging/consoleBuffer";
+import type { BugReportDebugInfo } from "@/types";
 
 export default function NewBugReportPage() {
   const router = useRouter();
   const { user } = useAuth();
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
+  const [attachLog, setAttachLog] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,10 +28,21 @@ export default function NewBugReportPage() {
     }
     setSubmitting(true);
     try {
+      const debugInfo: BugReportDebugInfo | undefined = attachLog
+        ? {
+            url: window.location.href,
+            userAgent: navigator.userAgent,
+            screen: `${window.screen.width}x${window.screen.height}`,
+            online: navigator.onLine,
+            consoleLog: getConsoleLog(),
+            capturedAt: Date.now(),
+          }
+        : undefined;
       const id = await createBugReport({
         title: t,
         body: b,
         authorName: user.displayName ?? "사용자",
+        debugInfo,
       });
       router.replace(`/bugs/${id}`);
     } catch (e) {
@@ -71,6 +85,22 @@ export default function NewBugReportPage() {
             className="w-full rounded-md border border-border bg-background px-3 py-2 text-base"
           />
         </div>
+
+        <label className="flex items-start gap-2 rounded-md border border-border bg-card px-3 py-2.5 text-sm">
+          <input
+            type="checkbox"
+            checked={attachLog}
+            onChange={(e) => setAttachLog(e.target.checked)}
+            className="mt-0.5"
+          />
+          <span>
+            로그 첨부
+            <span className="mt-0.5 block text-xs text-muted-foreground">
+              현재 화면 URL, 브라우저 정보, 최근 콘솔 에러 기록을 함께 보냅니다. 원인 파악에
+              도움이 돼요. 운영자와 본인만 확인할 수 있습니다.
+            </span>
+          </span>
+        </label>
 
         {error ? (
           <p className="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">

@@ -17,12 +17,13 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { getFirebaseDb, getFirebaseAuth } from "@/lib/firebase/client";
-import type { BugReport, BugReportStatus } from "@/types";
+import type { BugReport, BugReportDebugInfo, BugReportStatus } from "@/types";
 
 export interface CreateBugReportInput {
   title: string;
   body: string;
   authorName: string;
+  debugInfo?: BugReportDebugInfo; // 작성자가 "로그 첨부"에 동의한 경우만
 }
 
 export async function createBugReport(input: CreateBugReportInput): Promise<string> {
@@ -37,6 +38,7 @@ export async function createBugReport(input: CreateBugReportInput): Promise<stri
     authorName: input.authorName,
     createdAt: Date.now(),
     status: "open" as BugReportStatus,
+    ...(input.debugInfo ? { debugInfo: input.debugInfo } : {}),
   });
   return ref.id;
 }

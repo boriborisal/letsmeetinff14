@@ -38,6 +38,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             {"Let's Meet in FF14"}
           </Link>
           <div className="flex items-center gap-2">
+            <Link
+              href="/bugs"
+              title="버그리포트"
+              aria-label="버그리포트"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border bg-secondary text-base transition hover:bg-accent"
+            >
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="7" y="8" width="10" height="10" rx="4" />
+                <path d="M7 12H3M21 12h-4M12 4v4M9 4l1.5 2M15 4l-1.5 2M4.5 19l3-2.2M19.5 19l-3-2.2" />
+              </svg>
+            </Link>
             <UserMenu />
             <ThemeToggle />
           </div>

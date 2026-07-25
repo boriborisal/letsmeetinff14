@@ -11,6 +11,7 @@ import {
   type User,
 } from "firebase/auth";
 import { getFirebaseAuth } from "@/lib/firebase/client";
+import { installConsoleCapture } from "@/lib/logging/consoleBuffer";
 
 interface AuthContextValue {
   user: User | null;
@@ -23,6 +24,11 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // 버그리포트 "로그 첨부" 기능용 — 앱 최초 마운트 시점부터 콘솔 에러 수집.
+  useEffect(() => {
+    installConsoleCapture();
+  }, []);
 
   useEffect(() => {
     const auth = getFirebaseAuth();

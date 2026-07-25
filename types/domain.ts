@@ -316,6 +316,16 @@ export interface BugReportReply {
   repliedAt: number;
 }
 
+// 작성 시점 브라우저 진단 스냅샷 (선택 첨부). 서버 로그/네트워크 요청 내용은 담지 않음.
+export interface BugReportDebugInfo {
+  url: string;
+  userAgent: string;
+  screen: string;          // "1920x1080"
+  online: boolean;
+  consoleLog: string[];    // 최근 console.error/warn + 미처리 예외 (최대 30줄)
+  capturedAt: number;
+}
+
 export interface BugReport {
   id: string;
   title: string;
@@ -326,6 +336,7 @@ export interface BugReport {
   updatedAt?: number;
   status: BugReportStatus;
   reply?: BugReportReply;       // 운영자 답변 (선택)
+  debugInfo?: BugReportDebugInfo; // 작성자가 동의하고 첨부한 경우만
 }
 
 export const BUG_STATUS_KOR: Record<BugReportStatus, string> = {
