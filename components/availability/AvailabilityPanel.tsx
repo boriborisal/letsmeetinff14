@@ -83,28 +83,17 @@ export function AvailabilityPanel({
   const [submitting, setSubmitting] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  // 자리 매칭은 프로필 설정 완료된 멤버만 대상 — 미설정 멤버의 placeholder
-  // (모그리/전사/MT)가 결과를 왜곡하지 않게 제외.
-  const matchableMembers = useMemo(
-    () => members.filter((m) => m.profileSetup !== false),
-    [members],
-  );
-  const matchableUids = useMemo(
-    () => new Set(matchableMembers.map((m) => m.uid)),
-    [matchableMembers],
-  );
-  const unsetCount = members.length - matchableMembers.length;
-
-  // 부모에서 받은 주별 응답을 본인 vs 다른 공대원으로 분리.
-  // othersAvail은 프로필 미설정 멤버를 제외 — 매칭 계산과 화면에 보이는
-  // "응답 인원" 카운트가 어긋나면(N/N인데 출발 불가) 혼란만 준다.
+  // 프로필 미설정(placeholder 서버/직업/자리 그대로) 멤버도 매칭 대상에 포함.
+  // 프로필 설정을 강제하면 참여 장벽이 커진다는 판단 — 대신 미설정 멤버는
+  // 기본값(MT)을 공유하므로 2명 이상 미설정이면 그 자리에서 충돌해 매칭이
+  // 실패할 수 있음(정상적인 "자리 안 맞음" 판정이지 버그 아님).
   const myAvail = useMemo(
     () => weekAvailabilities.find((a) => a.uid === uid),
     [weekAvailabilities, uid],
   );
   const othersAvail = useMemo(
-    () => weekAvailabilities.filter((a) => a.uid !== uid && matchableUids.has(a.uid)),
-    [weekAvailabilities, uid, matchableUids],
+    () => weekAvailabilities.filter((a) => a.uid !== uid),
+    [weekAvailabilities, uid],
   );
 
   // 본인 응답이 외부(자신의 다른 탭이나 직접 DB)에서 변경된 경우 sync
@@ -169,20 +158,17 @@ export function AvailabilityPanel({
     const slotKeys = weekWindowSlotKeys(weekStart, reelLen, fixed);
     // dayOnly는 고정 윈도우라 1릴 시작점이 정해짐 → aligned 분할.
     const windows = buildReelWindows(slotKeys, tier, { aligned: isDayOnly });
-    // othersAvail은 이미 matchableUids로 필터링됨 (위 정의 참고).
     const allAvail: { uid: string; available: SlotKey[] }[] = [
       ...othersAvail.map((a) => ({ uid: a.uid, available: a.available })),
+      { uid, available: Array.from(selfSlots) },
     ];
-    if (matchableUids.has(uid)) {
-      allAvail.push({ uid, available: Array.from(selfSlots) });
-    }
     return evaluateReels({
       tier,
-      members: matchableMembers,
+      members,
       availabilities: allAvail,
       windows,
     });
-  }, [weekStart, reelLen, tier, fixed, isDayOnly, othersAvail, selfSlots, uid, matchableMembers, matchableUids]);
+  }, [weekStart, reelLen, tier, fixed, isDayOnly, othersAvail, selfSlots, uid, members]);
 
   const departReelStarts = useMemo(
     () => new Set(feasibility.filter((f) => f.canDepart).map((f) => f.reel.startKey)),
@@ -341,7 +327,6 @@ export function AvailabilityPanel({
           isLeader={isLeader}
           uid={uid}
           reelsPerSession={isDayOnly ? windowReels : party.reelsPerSession ?? 1}
-          unsetMemberCount={unsetCount}
           onConfirmed={() => { /* 일정 확정은 ScheduleList가 자체 onSnapshot으로 갱신 */ }}
         />
       ) : null}
