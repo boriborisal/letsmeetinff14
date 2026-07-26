@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { PartyInfoPanel } from "@/components/party/PartyInfoPanel";
 import { AvailabilityPanel } from "@/components/availability/AvailabilityPanel";
@@ -14,6 +15,7 @@ import type { Availability, Member, Party } from "@/types";
 export default function PartyDetailPage({ params }: { params: { id: string } }) {
   const { id } = params;
   const { user } = useAuth();
+  const router = useRouter();
   const [party, setParty] = useState<Party | null>(null);
   const [members, setMembers] = useState<Member[] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -31,23 +33,41 @@ export default function PartyDetailPage({ params }: { params: { id: string } }) 
     if (!user) return;
     let cancelled = false;
 
+    // 공대 ID는 8자, 초대 코드는 6자(lib/utils/id.ts) — URL에 실수로 초대 코드를
+    // 넣은 경우(가입 링크가 아니라 "letsmeetinff14.vercel.app/party/{초대코드}"처럼
+    // 직접 입력) 흔히 헷갈리는 지점이라, 길이만으로 감지해 /join으로 조용히 보내준다.
+    // 리다이렉트 중엔 loading을 계속 true로 둬서 빈 오류 화면이 잠깐 스치는 걸 막는다.
+    function handleNotFound(): boolean {
+      if (cancelled) return true;
+      if (id.length === 6) {
+        router.replace(`/join?code=${encodeURIComponent(id.toUpperCase())}` as never);
+        return true;
+      }
+      setNotMember(true);
+      return false;
+    }
+
     getParty(id)
       .then((p) => {
         if (cancelled) return;
-        if (!p) setNotMember(true);
-        else setParty(p);
+        if (!p) {
+          if (!handleNotFound()) setLoading(false);
+        } else {
+          setParty(p);
+          setLoading(false);
+        }
       })
       .catch((err) => {
         if (cancelled) return;
         // permission-denied = 존재하지 않거나 비멤버 접근 (룰 상 둘을 구분할 수 없음).
         // 그 외(네트워크 등)는 일반 오류로 처리.
         if ((err as { code?: string })?.code === "permission-denied") {
-          setNotMember(true);
+          if (!handleNotFound()) setLoading(false);
         } else {
           setError("공대 정보를 불러오지 못했습니다.");
+          setLoading(false);
         }
-      })
-      .finally(() => !cancelled && setLoading(false));
+      });
 
     const unsub = subscribePartyMembers(id, (ms) => {
       if (cancelled) return;
@@ -58,7 +78,7 @@ export default function PartyDetailPage({ params }: { params: { id: string } }) 
       cancelled = true;
       unsub();
     };
-  }, [id, user]);
+  }, [id, user, router]);
 
   // 주별 응답 실시간 구독 (week 변경 시 재구독)
   useEffect(() => {
