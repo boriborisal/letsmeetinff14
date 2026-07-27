@@ -26,8 +26,7 @@ export const RAID_CONTENTS: readonly RaidContent[] = [
   { id: "dsr",  nameKor: "절 용시전쟁",           shortKor: "절용시",   tier: "ultimate", patch: "6.11", partySize: 8, releasedAtKor: "2022-10-25", active: true },
   { id: "top",  nameKor: "절 오메가 검증전",       shortKor: "절메가",   tier: "ultimate", patch: "6.31", partySize: 8, releasedAtKor: "2023-07-18", active: true },
   { id: "fru",  nameKor: "절 또 하나의 미래",       shortKor: "절에덴",   tier: "ultimate", patch: "7.11", partySize: 8, releasedAtKor: "2025-04-15", active: true },
-  // 글섭 2026-06-02 예정, 한섭 미정
-  { id: "fkn",  nameKor: "절 요성난무",           shortKor: "절케프카", tier: "ultimate", patch: "7.51", partySize: 8, active: false },
+  { id: "fkn",  nameKor: "절 요성난무",           shortKor: "절케프카", tier: "ultimate", patch: "7.51", partySize: 8, releasedAtKor: "2026-06-02", active: true },
 
   // ──────────────────────────────────────────────
   // 3.x 창천의 이슈가르드 — 기공성 알렉산더 영식
