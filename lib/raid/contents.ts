@@ -167,7 +167,7 @@ export const RAID_CONTENTS: readonly RaidContent[] = [
   { id: "ex_golbez",           nameKor: "극 골베자 토벌전",                tier: "extreme", patch: "6.4",  partySize: 8, releasedAtKor: "2023-10-31", active: true },
   { id: "ex_zeromus",          nameKor: "극 제로무스 토벌전",              tier: "extreme", patch: "6.5",  partySize: 8, releasedAtKor: "2024-04-02", active: true },
   // 황금 7.x
-  { id: "ex_vali",             nameKor: "극 발리지아 토벌전",              tier: "extreme", patch: "7.0",  partySize: 8, releasedAtKor: "2024-12-03", active: true },
+  { id: "ex_vali",             nameKor: "극 발리가르만다 토벌전",          tier: "extreme", patch: "7.0",  partySize: 8, releasedAtKor: "2024-12-03", active: true },
   { id: "ex_eternal_queen",    nameKor: "극 이터널 퀸 토벌전",             tier: "extreme", patch: "7.1",  partySize: 8, releasedAtKor: "2025-03-18", active: true },
   { id: "ex_zelenia",          nameKor: "극 젤레니아 토벌전",              tier: "extreme", patch: "7.2",  partySize: 8, releasedAtKor: "2025-07-15", active: true },
   { id: "ex_eternal_dark",     nameKor: "극 영원의 어둠 토벌전",           tier: "extreme", patch: "7.3",  partySize: 8, releasedAtKor: "2025-10-28", active: true },
